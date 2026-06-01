@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Empresa | Frigestor</title>
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" />
+  <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png" />
+  <link rel="manifest" href="/assets/images/site.webmanifest" />
+  <meta name="theme-color" content="#062038" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/assets/css/global.css" />
+  <link rel="stylesheet" href="/assets/css/admin-tenant.css" />
+  <link rel="stylesheet" href="/assets/css/campo.css" />
+</head>
+<body class="app-page">
+
+  <header class="app-header">
+    <div class="container app-header__inner">
+      <div class="app-header__lead">
+        <img class="app-header__logo" src="/assets/images/logo.png" alt="" width="28" height="28" />
+        <div class="app-header__meta">
+          <strong class="app-header__empresa" id="hdr-empresa">Empresa</strong>
+          <span class="app-header__role" id="hdr-categoria">Admin</span>
+        </div>
+      </div>
+      <div class="app-header__trail">
+        <span class="app-header__pessoa">Ola, <strong id="hdr-nome">admin</strong></span>
+        <button type="button" class="btn btn--ghost btn--sm app-header__logout" onclick="window.fazerLogout()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-tenant">
+    <div class="container">
+
+      <div class="page-hero page-hero--stacked">
+        <div>
+          <h1 class="page-hero__title">Painel da empresa</h1>
+          <p class="page-hero__sub">Gestao de tecnicos, equipamentos e historico do seu tenant.</p>
+        </div>
+      </div>
+
+      <!-- ============ TABS ============ -->
+      <nav class="tabs">
+        <button class="tab-btn is-active" data-tab="equipamentos">Equipamentos</button>
+        <button class="tab-btn" data-tab="clientes">Clientes</button>
+        <button class="tab-btn" data-tab="tecnicos">Tecnicos</button>
+        <button class="tab-btn" data-tab="historico">Historico global</button>
+      </nav>
+
+      <!-- ============ TAB EQUIPAMENTOS ============ -->
+      <section class="tab-panel is-active" data-panel="equipamentos">
+        <details class="filters-wrap" id="filters-details">
+          <summary class="filters-toggle">
+            <span class="filters-toggle__label">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              Filtros
+              <span class="filters-toggle__count" id="filters-count" hidden>0</span>
+            </span>
+            <span class="filters-toggle__hint">Cliente, tipo, tecnico, datas</span>
+            <svg class="filters-toggle__chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+
+          <div class="filters">
+            <div class="form-group">
+              <label class="form-label" for="f-cliente">Cliente / Empresa</label>
+              <select class="form-control" id="f-cliente">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="f-tipo">Tipo</label>
+              <select class="form-control" id="f-tipo">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="f-tec">Tecnico</label>
+              <select class="form-control" id="f-tec">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="f-de">Atualizado de</label>
+              <input class="form-control" type="date" id="f-de" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="f-ate">ate</label>
+              <input class="form-control" type="date" id="f-ate" />
+            </div>
+            <div class="filters__actions">
+              <button type="button" class="btn btn--ghost btn--sm" id="btn-limpar-filtros">Limpar filtros</button>
+            </div>
+          </div>
+        </details>
+
+        <div class="table-wrap">
+          <table class="table table--equip">
+            <thead>
+              <tr>
+                <th class="th-actions">Acoes</th>
+                <th>Cliente</th>
+                <th>Tecnico</th>
+                <th>Nome / Modelo</th>
+                <th>Localizacao</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-equip"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ TAB CLIENTES ============ -->
+      <section class="tab-panel" data-panel="clientes">
+        <div class="panel-head">
+          <h3 class="panel-head__title">Empresas-cliente</h3>
+          <button type="button" class="btn btn--accent btn--sm" id="btn-novo-cliente">+ Cadastrar cliente</button>
+        </div>
+        <p class="text-muted" style="margin: -6px 0 16px;">Os tecnicos escolhem o cliente desta lista ao cadastrar equipamentos.</p>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Status</th>
+                <th>Acoes</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-clientes"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ TAB TECNICOS ============ -->
+      <section class="tab-panel" data-panel="tecnicos">
+        <div class="panel-head">
+          <h3 class="panel-head__title">Tecnicos cadastrados</h3>
+          <button class="btn btn--accent btn--sm" id="btn-novo-tec">+ Adicionar tecnico</button>
+        </div>
+        <div class="tecnicos-grid" id="tec-grid"></div>
+      </section>
+
+      <!-- ============ TAB HISTORICO GLOBAL ============ -->
+      <section class="tab-panel" data-panel="historico">
+        <h3 class="panel-head__title panel-head__title--solo">Historico global de visitas</h3>
+        <div class="table-wrap">
+          <table class="table table--hist">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Equipamento</th>
+                <th>Cliente</th>
+                <th>Tecnico</th>
+                <th>Tipo de servico</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-hist"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ RESUMO GERAL (estatisticas) ============ -->
+      <section class="stats-section">
+        <h3 class="stats-section__title">Resumo geral</h3>
+        <div class="stats">
+          <div class="stat">
+            <span class="stat__label">Equipamentos</span>
+            <strong class="stat__value" id="stat-equip">-</strong>
+            <span class="stat__sub">cadastrados no sistema</span>
+          </div>
+          <div class="stat">
+            <span class="stat__label">Tecnicos ativos</span>
+            <strong class="stat__value" id="stat-tec">-</strong>
+            <span class="stat__sub">com acesso liberado</span>
+          </div>
+          <div class="stat">
+            <span class="stat__label">Visitas registradas</span>
+            <strong class="stat__value" id="stat-vis">-</strong>
+            <span class="stat__sub">em todos os equipamentos</span>
+          </div>
+          <div class="stat">
+            <span class="stat__label">Ultima atualizacao</span>
+            <strong class="stat__value stat__value--sm" id="stat-upd">-</strong>
+            <span class="stat__sub" id="stat-upd-equip">-</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ============ MODAL: NOVO TECNICO ============ -->
+  <div class="modal-backdrop" id="modal-novo-tec">
+    <div class="modal">
+      <div class="modal__header">
+        <h3>Adicionar novo tecnico</h3>
+        <button class="modal__close" data-close="modal-novo-tec">&times;</button>
+      </div>
+      <div class="modal__body">
+        <!--
+          OBS: Em producao (etapa 2), o admin nao cria usuarios direto do front
+          pelo SDK do Firebase Auth sem efeitos colaterais (criaria a sessao do
+          novo usuario). A forma mais simples e' usar `createUserWithEmailAndPassword`,
+          fazer signOut imediatamente e reautenticar o admin com as credenciais
+          dele. Documente isso no codigo da etapa 2 ou utilize Cloud Function /
+          backend com Admin SDK.
+        -->
+        <form id="form-novo-tec" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="tec-nome">Nome completo *</label>
+            <input class="form-control" id="tec-nome" />
+            <small class="form-error" id="err-tec-nome"></small>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tec-email">E-mail *</label>
+            <input class="form-control" type="email" id="tec-email" />
+            <small class="form-error" id="err-tec-email"></small>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tec-senha">Senha temporaria *</label>
+            <input class="form-control" type="text" id="tec-senha" placeholder="O tecnico devera alterar no primeiro acesso" />
+            <small class="form-error" id="err-tec-senha"></small>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role</label>
+            <input class="form-control" value="tecnico" disabled />
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn--ghost" data-close="modal-novo-tec">Cancelar</button>
+            <button type="submit" id="btn-salvar-tec" class="btn btn--accent">Criar tecnico</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: EDITAR EQUIPAMENTO ============ -->
+  <div class="modal-backdrop" id="modal-edit">
+    <div class="modal modal--wide">
+      <div class="modal__header">
+        <h3>Editar equipamento</h3>
+        <button class="modal__close" data-close="modal-edit">&times;</button>
+      </div>
+      <div class="modal__body">
+        <form id="form-edit">
+          <input type="hidden" id="edit-id" />
+          <div class="form-group"><label class="form-label">Nome / Modelo</label><input class="form-control" id="edit-nome" required /></div>
+          <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select class="form-control" id="edit-tipo" required></select>
+          </div>
+          <div class="form-group"><label class="form-label">N. de serie <span class="form-label__hint">(opcional)</span></label><input class="form-control" id="edit-serie" /></div>
+          <div class="form-group"><label class="form-label">Localizacao</label><input class="form-control" id="edit-local" required /></div>
+          <div class="form-group">
+            <label class="form-label">Cliente / Empresa</label>
+            <select class="form-control" id="edit-cliente" required></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tecnico responsavel</label>
+            <select class="form-control" id="edit-tec"></select>
+          </div>
+          <div id="edit-ar-specs"></div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Data de instalacao <span class="form-label__hint">(imutavel)</span></label>
+              <input class="form-control" id="edit-data-display" disabled />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ultima atualizacao</label>
+              <input class="form-control" id="edit-atualizado-display" disabled />
+            </div>
+          </div>
+
+          <div class="form-actions form-actions--split">
+            <button type="button" class="btn btn--danger" id="btn-excluir-edit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+              Excluir equipamento
+            </button>
+            <div class="form-actions__right">
+              <button type="button" class="btn btn--ghost" data-close="modal-edit">Cancelar</button>
+              <button type="submit" id="btn-salvar-edit" class="btn btn--accent">Salvar alteracoes</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: HISTORICO DE UM EQUIPAMENTO ============ -->
+  <div class="modal-backdrop" id="modal-hist-equip">
+    <div class="modal modal--detalhes">
+      <div class="modal__header">
+        <h3 id="hist-equip-titulo">Historico do equipamento</h3>
+        <button class="modal__close" data-close="modal-hist-equip">&times;</button>
+      </div>
+      <div class="modal__body" id="hist-equip-body"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVO CLIENTE -->
+  <div class="modal-backdrop" id="modal-cliente">
+    <div class="modal">
+      <div class="modal__header">
+        <h3>Cadastrar cliente</h3>
+        <button class="modal__close" data-close="modal-cliente">&times;</button>
+      </div>
+      <div class="modal__body">
+        <form id="form-cliente">
+          <div class="form-group">
+            <label class="form-label" for="cliente-nome">Nome da empresa-cliente *</label>
+            <input class="form-control" id="cliente-nome" required placeholder="Ex: Shopping Center Norte" />
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn--ghost" data-close="modal-cliente">Cancelar</button>
+            <button type="submit" class="btn btn--accent" id="btn-salvar-cliente">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="/assets/js/firebase-config.js"></script>
+  <script src="/assets/js/equipamento-ar-specs.js"></script>
+  <script src="/assets/js/app-shell.js"></script>
+  <script src="/assets/js/qrcode-gen.js"></script>
+  <script src="/assets/js/init.js"></script>
+  <script src="/assets/js/admin-tenant.js"></script>
+</body>
+</html>

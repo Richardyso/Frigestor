@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Plataforma | Frigestor</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" />
+  <meta name="theme-color" content="#1e1035" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/assets/css/global.css" />
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+</head>
+<body class="admin-platform app-page">
+
+  <header class="app-header app-header--platform">
+    <div class="container app-header__inner">
+      <div class="app-header__lead">
+        <img class="app-header__logo" src="/assets/images/logo.png" alt="" width="28" height="28" />
+        <div class="app-header__meta">
+          <strong class="app-header__empresa" id="hdr-empresa">Frigestor</strong>
+          <span class="app-header__role" id="hdr-categoria">Admin plataforma</span>
+        </div>
+      </div>
+      <div class="app-header__trail">
+        <span class="app-header__pessoa">Ola, <strong id="hdr-nome">Gestor</strong></span>
+        <button type="button" class="btn btn--ghost btn--sm app-header__logout" onclick="window.fazerLogout()">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-platform">
+    <div class="container">
+
+      <div class="platform-hero">
+        <div class="platform-hero__banner">
+          <div class="platform-hero__glow" aria-hidden="true"></div>
+          <div class="platform-hero__lockup">
+            <img class="platform-hero__logo" src="/assets/images/logo.png" alt="" width="56" height="56" />
+            <div>
+              <span class="platform-hero__badge">Painel supremo</span>
+              <h1>Controle da plataforma</h1>
+              <p>Gerencie empresas, usuarios e cadastros pendentes de todos os tenants.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="platform-stats">
+        <div class="platform-stat">
+          <span class="platform-stat__label">Empresas</span>
+          <strong class="platform-stat__value" id="stat-tenants">-</strong>
+        </div>
+        <div class="platform-stat">
+          <span class="platform-stat__label">Usuarios totais</span>
+          <strong class="platform-stat__value" id="stat-users">-</strong>
+        </div>
+        <div class="platform-stat">
+          <span class="platform-stat__label">Equipamentos</span>
+          <strong class="platform-stat__value" id="stat-equip">-</strong>
+        </div>
+        <div class="platform-stat">
+          <span class="platform-stat__label">Pendentes</span>
+          <strong class="platform-stat__value" id="stat-pending">-</strong>
+        </div>
+      </div>
+
+      <nav class="platform-tabs">
+        <button class="platform-tab is-active" data-tab="empresas">Empresas</button>
+        <button class="platform-tab" data-tab="usuarios">Usuarios</button>
+        <button class="platform-tab" data-tab="operacional">Equipamentos e visitas</button>
+        <button class="platform-tab" data-tab="pendentes">Cadastros pendentes</button>
+      </nav>
+
+      <!-- EMPRESAS -->
+      <section class="platform-panel is-active" data-panel="empresas">
+        <div class="tenants-toolbar">
+          <p class="tenants-toolbar__hint">Cada empresa recebe um ID unico usado nas rotas e pastas de dados (<code>data/{id}/</code>).</p>
+          <button type="button" class="btn btn--accent btn--sm" id="btn-nova-empresa">+ Nova empresa</button>
+        </div>
+        <div class="tenant-grid" id="tenant-grid"></div>
+      </section>
+
+      <!-- USUARIOS -->
+      <section class="platform-panel" data-panel="usuarios">
+        <div class="users-toolbar">
+          <div class="form-group">
+            <label class="form-label" for="sel-tenant">Empresa (tenant)</label>
+            <select class="form-control" id="sel-tenant"></select>
+          </div>
+          <button class="btn btn--accent btn--sm" id="btn-novo-user">+ Novo usuario</button>
+        </div>
+        <div class="table-wrap">
+          <table class="table table--users">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>E-mail</th>
+                <th>Perfil</th>
+                <th>Status</th>
+                <th>Acoes</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-users"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- EQUIPAMENTOS E VISITAS -->
+      <section class="platform-panel" data-panel="operacional">
+        <nav class="platform-subtabs">
+          <button class="platform-subtab is-active" data-subtab="equipamentos">Equipamentos</button>
+          <button class="platform-subtab" data-subtab="visitas">Visitas</button>
+        </nav>
+
+        <div class="operacional-toolbar">
+          <div class="form-group">
+            <label class="form-label" for="sel-operacional-tenant">Filtrar por empresa</label>
+            <select class="form-control" id="sel-operacional-tenant">
+              <option value="">Todas as empresas</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="platform-subpanel is-active" data-subpanel="equipamentos">
+          <div class="table-wrap">
+            <table class="table table--operacional">
+              <thead>
+                <tr>
+                  <th>Empresa</th>
+                  <th>Equipamento</th>
+                  <th>Tipo</th>
+                  <th>Cliente</th>
+                  <th>Local</th>
+                  <th>Tecnico</th>
+                  <th>Instalado</th>
+                </tr>
+              </thead>
+              <tbody id="tbl-equipamentos"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="platform-subpanel" data-subpanel="visitas">
+          <div class="table-wrap">
+            <table class="table table--operacional">
+              <thead>
+                <tr>
+                  <th>Empresa</th>
+                  <th>Equipamento</th>
+                  <th>Data</th>
+                  <th>Servico</th>
+                  <th>Tecnico</th>
+                  <th>Descricao</th>
+                </tr>
+              </thead>
+              <tbody id="tbl-visitas"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PENDENTES -->
+      <section class="platform-panel" data-panel="pendentes">
+        <div class="pending-list" id="pending-list"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- MODAL: NOVO USUARIO -->
+  <div class="modal-backdrop" id="modal-user">
+    <div class="modal">
+      <div class="modal__header">
+        <h3 id="modal-user-title">Novo usuario</h3>
+        <button class="modal__close" data-close="modal-user">&times;</button>
+      </div>
+      <div class="modal__body">
+        <form id="form-user" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="user-nome">Nome *</label>
+            <input class="form-control" id="user-nome" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="user-email">E-mail *</label>
+            <input class="form-control" type="email" id="user-email" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="user-senha">Senha inicial *</label>
+            <input class="form-control" type="password" id="user-senha" placeholder="Minimo 4 caracteres" autocomplete="new-password" />
+            <span class="form-label__hint">Definida apenas na criacao. Alteracao de senha ficara a cargo do usuario ou do admin da empresa.</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="user-role">Perfil</label>
+            <select class="form-control" id="user-role">
+              <option value="tecnico">Tecnico</option>
+              <option value="admin">Admin da empresa</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn--ghost" data-close="modal-user">Cancelar</button>
+            <button type="submit" id="btn-salvar-user" class="btn btn--accent">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVA EMPRESA -->
+  <div class="modal-backdrop" id="modal-tenant">
+    <div class="modal modal--wide">
+      <div class="modal__header">
+        <h3>Nova empresa</h3>
+        <button class="modal__close" data-close="modal-tenant">&times;</button>
+      </div>
+      <div class="modal__body">
+        <form id="form-tenant" novalidate>
+          <p class="modal-intro">Serao criados o cadastro em <strong>tenants.json</strong>, a pasta <strong>data/{id}/</strong> com config, usuarios, equipamentos e visitas, e o primeiro admin da empresa.</p>
+
+          <h4 class="form-section-title">Dados da empresa</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="tenant-nome">Nome da empresa *</label>
+              <input class="form-control" id="tenant-nome" placeholder="Ex: Clima Frio" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="tenant-id">ID * <span class="form-label__hint">(slug nas rotas)</span></label>
+              <input class="form-control" id="tenant-id" placeholder="clima-frio" pattern="[a-z0-9][a-z0-9-]{1,39}" />
+              <span class="form-label__hint" id="tenant-id-preview">Gerado automaticamente a partir do nome.</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tenant-brand-sub">Subtitulo da marca <span class="form-label__hint">(opcional)</span></label>
+            <input class="form-control" id="tenant-brand-sub" placeholder="Climatizacao e ar condicionado" />
+            <span class="form-label__hint">Tipos de equipamento, visitas e especificacoes de AR sao padrao para todas as empresas.</span>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="tenant-responsavel">Nome do responsavel *</label>
+              <input class="form-control" id="tenant-responsavel" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="tenant-telefone">Telefone comercial *</label>
+              <input class="form-control" id="tenant-telefone" placeholder="(21) 99999-9999" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="tenant-email">E-mail comercial *</label>
+              <input class="form-control" type="email" id="tenant-email" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="tenant-cnpj">CNPJ <span class="form-label__hint">(opcional)</span></label>
+              <input class="form-control" id="tenant-cnpj" placeholder="00.000.000/0000-00" />
+            </div>
+          </div>
+
+          <h4 class="form-section-title">Admin inicial da empresa</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="tenant-admin-nome">Nome do admin *</label>
+              <input class="form-control" id="tenant-admin-nome" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="tenant-admin-email">E-mail de login *</label>
+              <input class="form-control" type="email" id="tenant-admin-email" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tenant-admin-senha">Senha inicial *</label>
+            <input class="form-control" type="password" id="tenant-admin-senha" placeholder="Minimo 4 caracteres" autocomplete="new-password" />
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn--ghost" data-close="modal-tenant">Cancelar</button>
+            <button type="submit" id="btn-salvar-tenant" class="btn btn--accent">Criar empresa</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR EMPRESA (dados internos — CNPJ nao aparece nos cards) -->
+  <div class="modal-backdrop" id="modal-tenant-edit">
+    <div class="modal">
+      <div class="modal__header">
+        <h3 id="modal-tenant-edit-title">Editar empresa</h3>
+        <button class="modal__close" data-close="modal-tenant-edit">&times;</button>
+      </div>
+      <div class="modal__body">
+        <form id="form-tenant-edit" novalidate>
+          <input type="hidden" id="edit-tenant-id" />
+          <div class="form-group">
+            <label class="form-label" for="edit-tenant-nome">Nome</label>
+            <input class="form-control" id="edit-tenant-nome" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="edit-tenant-responsavel">Responsavel</label>
+              <input class="form-control" id="edit-tenant-responsavel" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-tenant-telefone">Telefone comercial</label>
+              <input class="form-control" id="edit-tenant-telefone" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="edit-tenant-email">E-mail comercial</label>
+              <input class="form-control" type="email" id="edit-tenant-email" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-tenant-cnpj">CNPJ</label>
+              <input class="form-control" id="edit-tenant-cnpj" placeholder="00.000.000/0000-00" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn--ghost" data-close="modal-tenant-edit">Cancelar</button>
+            <button type="submit" id="btn-salvar-tenant-edit" class="btn btn--accent">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/js/firebase-config.js"></script>
+  <script src="/assets/js/app-shell.js"></script>
+  <script src="/assets/js/init.js"></script>
+  <script src="/assets/js/admin.js"></script>
+</body>
+</html>

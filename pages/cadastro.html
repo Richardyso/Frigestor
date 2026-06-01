@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cadastro | Frigestor</title>
+  <meta name="description" content="Crie sua conta na plataforma Frigestor." />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" />
+  <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png" />
+  <link rel="manifest" href="/assets/images/site.webmanifest" />
+  <meta name="theme-color" content="#062038" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/assets/css/global.css" />
+  <link rel="stylesheet" href="/assets/css/login.css" />
+</head>
+<body>
+
+  <main class="login-shell">
+    <aside class="login-aside">
+      <div class="login-aside__top">
+        <a class="login-brand-link" href="/pages/login.html" title="Ir para o login">
+          <img src="/assets/images/logo.png" alt="Frigestor" class="brand-mark" width="44" height="44" />
+          <span class="brand-wordmark brand-wordmark--md"><span class="brand-wordmark__bold">FRI</span><span class="brand-wordmark__light">gestor</span></span>
+        </a>
+      </div>
+
+      <div class="login-aside__hero">
+        <h2>Crie sua conta na plataforma.</h2>
+        <p>
+          Apos o cadastro, o administrador da sua empresa analisa e libera seu acesso.
+          Voce recebera um e-mail de boas-vindas e podera entrar assim que for ativado.
+        </p>
+      </div>
+
+      <div class="login-aside__foot">
+        &copy; <span id="ano"></span> Frigestor — <a href="/">voltar ao site</a>
+      </div>
+    </aside>
+
+    <section class="login-main">
+      <div class="login-card">
+        <a class="login-back" href="/pages/login.html">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Voltar ao login
+        </a>
+
+        <div id="cadastro-intro">
+          <h1 id="cadastro-titulo">Criar conta</h1>
+          <p class="subtitle" id="cadastro-subtitulo">Preencha seus dados. O administrador da sua empresa liberara o acesso.</p>
+        </div>
+
+        <div class="cadastro-sucesso hidden" id="cadastro-sucesso" aria-live="polite">
+          <p class="cadastro-sucesso__email-hint">Verifique seu e-mail — confira tambem a caixa de spam, pois as vezes a mensagem vai para la.</p>
+          <h1>Aguarde seu administrador aprovar seu cadastro.</h1>
+          <div class="auth-success auth-success--standalone">
+            <p id="msg-sucesso-texto">Enviamos um e-mail de boas-vindas com os proximos passos. Voce so podera entrar apos a ativacao.</p>
+            <a href="/pages/login.html" class="btn btn--accent btn--block">Ir para o login</a>
+          </div>
+        </div>
+
+        <div id="cadastro-formulario">
+        <button type="button" class="btn btn--google btn--block" id="btn-google">
+          <svg class="btn--google__icon" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.083 36 24 36c-5.514 0-10-4.486-10-10s4.486-10 10-10c2.761 0 5.266 1.12 7.074 2.925l5.657-5.657C34.046 10.671 29.268 8.5 24 8.5 14.716 8.5 7 16.216 7 25.5S14.716 42.5 24 42.5c8.284 0 15.5-6.716 15.5-15.5 0-1.039-.105-2.055-.389-3.417z"/>
+            <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 16.108 18.961 13 24 13c2.761 0 5.266 1.12 7.074 2.925l5.657-5.657C34.046 10.671 29.268 8.5 24 8.5c-6.648 0-12.354 3.784-15.694 9.191z"/>
+            <path fill="#4CAF50" d="M24 42.5c5.013 0 9.563-1.928 13.011-5.078l-6.011-4.894C29.083 34.343 26.671 35.5 24 35.5c-5.046 0-9.332-3.417-10.863-8.029l-6.52 5.015C9.505 38.556 16.227 42.5 24 42.5z"/>
+            <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.002-.001 6.011 4.894C36.755 39.204 44 34 44 25.5c0-1.039-.105-2.055-.389-3.417z"/>
+          </svg>
+          Continuar com Google
+        </button>
+        <p class="auth-soon hidden" id="google-hint"></p>
+
+        <div class="auth-divider"><span>ou cadastre com e-mail</span></div>
+
+        <form id="form-cadastro" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="cad-nome">Nome completo</label>
+            <input class="form-control" type="text" id="cad-nome" autocomplete="name" placeholder="Seu nome" />
+            <small class="form-error" id="err-nome"></small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cad-email">E-mail</label>
+            <input class="form-control" type="email" id="cad-email" autocomplete="email" placeholder="seu@email.com" />
+            <small class="form-error" id="err-email"></small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cad-senha">Senha</label>
+            <input class="form-control" type="password" id="cad-senha" autocomplete="new-password" placeholder="Minimo 6 caracteres" />
+            <small class="form-error" id="err-senha"></small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cad-senha2">Confirmar senha</label>
+            <input class="form-control" type="password" id="cad-senha2" autocomplete="new-password" placeholder="Repita a senha" />
+            <small class="form-error" id="err-senha2"></small>
+          </div>
+
+          <small class="form-error form-error--block" id="err-geral"></small>
+
+          <button type="submit" id="btn-cadastrar" class="btn btn--accent btn--block">Criar conta</button>
+        </form>
+
+        <p class="auth-switch">
+          Ja tem conta? <a href="/pages/login.html">Entrar</a>
+        </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="/assets/js/firebase-config.js"></script>
+  <script src="/assets/js/firebase-auth-client.js"></script>
+  <script src="/assets/js/init.js"></script>
+  <script src="/assets/js/cadastro.js"></script>
+</body>
+</html>

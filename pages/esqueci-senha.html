@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Recuperar senha | Frigestor</title>
+  <meta name="description" content="Recupere o acesso a sua conta Frigestor com codigo enviado por e-mail." />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" />
+  <link rel="apple-touch-icon" href="/assets/images/apple-touch-icon.png" />
+  <link rel="manifest" href="/assets/images/site.webmanifest" />
+  <meta name="theme-color" content="#062038" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/assets/css/global.css" />
+  <link rel="stylesheet" href="/assets/css/login.css" />
+</head>
+<body>
+
+  <main class="login-shell">
+    <aside class="login-aside">
+      <div class="login-aside__top">
+        <a class="login-brand-link" href="/pages/login.html" title="Ir para o login">
+          <img src="/assets/images/logo.png" alt="Frigestor" class="brand-mark" width="44" height="44" />
+          <span class="brand-wordmark brand-wordmark--md"><span class="brand-wordmark__bold">FRI</span><span class="brand-wordmark__light">gestor</span></span>
+        </a>
+      </div>
+
+      <div class="login-aside__hero">
+        <h2>Recupere o acesso com seguranca.</h2>
+        <p>
+          Enviaremos um codigo de 6 digitos para o seu e-mail cadastrado.
+          Depois de validar o codigo, voce define uma nova senha.
+        </p>
+      </div>
+
+      <div class="login-aside__foot">
+        &copy; <span id="ano"></span> Frigestor — <a href="/">voltar ao site</a>
+      </div>
+    </aside>
+
+    <section class="login-main">
+      <div class="login-card">
+        <a class="login-back" href="/pages/login.html">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Voltar ao login
+        </a>
+
+        <div class="auth-steps" aria-hidden="true">
+          <span class="auth-steps__item is-active" data-step-dot="1">1</span>
+          <span class="auth-steps__line"></span>
+          <span class="auth-steps__item" data-step-dot="2">2</span>
+          <span class="auth-steps__line"></span>
+          <span class="auth-steps__item" data-step-dot="3">3</span>
+        </div>
+
+        <!-- Etapa 1: e-mail -->
+        <div id="step-email">
+          <h1>Esqueci minha senha</h1>
+          <p class="subtitle">Informe o e-mail da sua conta. Enviaremos um codigo de verificacao.</p>
+
+          <form id="form-email" novalidate>
+            <div class="form-group">
+              <label class="form-label" for="rec-email">E-mail</label>
+              <input class="form-control" type="email" id="rec-email" autocomplete="email" placeholder="seu@email.com" />
+              <small class="form-error" id="err-email"></small>
+            </div>
+            <small class="form-error form-error--block" id="err-geral-1"></small>
+            <button type="submit" id="btn-enviar-codigo" class="btn btn--accent btn--block">Enviar codigo</button>
+          </form>
+        </div>
+
+        <!-- Etapa 2: codigo -->
+        <div id="step-codigo" class="hidden">
+          <h1>Verificar codigo</h1>
+          <p class="subtitle">Digite o codigo de 6 digitos enviado para <strong id="rec-email-label"></strong>.</p>
+
+          <form id="form-codigo" novalidate>
+            <div class="form-group">
+              <label class="form-label" for="rec-codigo">Codigo de verificacao</label>
+              <input class="form-control form-control--code" type="text" id="rec-codigo" inputmode="numeric" maxlength="6" pattern="[0-9]*" autocomplete="one-time-code" placeholder="000000" />
+              <small class="form-error" id="err-codigo"></small>
+            </div>
+            <small class="form-error form-error--block" id="err-geral-2"></small>
+            <button type="submit" id="btn-verificar-codigo" class="btn btn--accent btn--block">Verificar codigo</button>
+          </form>
+          <p class="auth-switch auth-switch--dim">
+            Nao recebeu? <button type="button" class="auth-link-btn" id="btn-reenviar">Reenviar codigo</button>
+          </p>
+        </div>
+
+        <!-- Etapa 3: nova senha -->
+        <div id="step-senha" class="hidden">
+          <h1>Nova senha</h1>
+          <p class="subtitle">Defina sua nova senha. Ela sera armazenada de forma segura.</p>
+
+          <form id="form-senha" novalidate>
+            <div class="form-group">
+              <label class="form-label" for="rec-senha">Nova senha</label>
+              <input class="form-control" type="password" id="rec-senha" autocomplete="new-password" placeholder="Minimo 6 caracteres" />
+              <small class="form-error" id="err-senha"></small>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="rec-senha2">Confirmar nova senha</label>
+              <input class="form-control" type="password" id="rec-senha2" autocomplete="new-password" placeholder="Repita a senha" />
+              <small class="form-error" id="err-senha2"></small>
+            </div>
+            <small class="form-error form-error--block" id="err-geral-3"></small>
+            <button type="submit" id="btn-salvar-senha" class="btn btn--accent btn--block">Salvar nova senha</button>
+          </form>
+        </div>
+
+        <!-- Sucesso -->
+        <div id="step-sucesso" class="hidden">
+          <div class="auth-success auth-success--standalone">
+            <h1>Senha alterada</h1>
+            <p id="msg-sucesso">Sua senha foi atualizada com sucesso.</p>
+            <a href="/pages/login.html" class="btn btn--accent btn--block">Ir para o login</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/assets/js/firebase-config.js"></script>
+  <script src="/assets/js/init.js"></script>
+  <script src="/assets/js/esqueci-senha.js"></script>
+</body>
+</html>

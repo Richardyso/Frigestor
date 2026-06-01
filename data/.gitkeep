@@ -1,0 +1,2 @@
+# Dados do Frigestor ficam no Cloud Firestore (nao nesta pasta).
+# Para reimportar de backup local: npm run migrate:firestore (requer JSON em /data).

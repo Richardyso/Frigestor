@@ -1,0 +1,361 @@
+/* admin.css — Painel supremo da plataforma Frigestor */
+
+body.admin-platform {
+  background:
+    radial-gradient(900px 500px at 100% 0%, rgba(167, 139, 250, 0.1), transparent 55%),
+    radial-gradient(700px 420px at 0% 100%, rgba(82, 184, 232, 0.08), transparent 60%),
+    var(--bg-0);
+}
+
+.app-header--platform {
+  background: linear-gradient(180deg, rgba(30, 16, 53, 0.95) 0%, rgba(8, 18, 32, 0.92) 100%);
+  border-bottom: 1px solid rgba(167, 139, 250, 0.22);
+}
+.app-header--platform .app-header__role {
+  color: #c4b5fd;
+}
+
+main.admin-platform {
+  padding: 28px 0 72px;
+}
+
+.platform-hero {
+  margin-bottom: 28px;
+}
+.platform-hero__banner {
+  position: relative;
+  overflow: hidden;
+  padding: 28px 28px 26px;
+  border-radius: 20px;
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  background:
+    radial-gradient(520px 240px at 0% 0%, rgba(167, 139, 250, 0.18), transparent 55%),
+    radial-gradient(480px 220px at 100% 100%, rgba(82, 184, 232, 0.12), transparent 60%),
+    linear-gradient(145deg, rgba(30, 16, 53, 0.85) 0%, rgba(5, 21, 37, 0.95) 100%);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35);
+}
+.platform-hero__glow {
+  position: absolute;
+  top: -40%;
+  right: -10%;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.2), transparent 70%);
+  pointer-events: none;
+}
+.platform-hero__lockup {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.platform-hero__logo {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  filter: drop-shadow(0 8px 24px rgba(124, 58, 237, 0.4));
+}
+.platform-hero__badge {
+  display: inline-flex;
+  padding: 5px 12px;
+  margin-bottom: 10px;
+  background: rgba(167, 139, 250, 0.14);
+  border: 1px solid rgba(167, 139, 250, 0.32);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #c4b5fd;
+}
+.platform-hero h1 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  margin: 0 0 8px;
+  background: linear-gradient(135deg, #fff 0%, #c4b5fd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.platform-hero p {
+  margin: 0;
+  color: var(--text-muted);
+  max-width: 520px;
+  line-height: 1.55;
+}
+
+.platform-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.platform-stat {
+  padding: 18px 20px;
+  background: linear-gradient(160deg, rgba(124, 58, 237, 0.16), rgba(10, 69, 117, 0.2));
+  border: 1px solid rgba(167, 139, 250, 0.18);
+  border-radius: var(--radius-lg);
+}
+.platform-stat__label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.platform-stat__value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.platform-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: 24px;
+}
+.platform-tab {
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.platform-tab:hover { color: var(--text); }
+.platform-tab.is-active {
+  color: #c4b5fd;
+  border-bottom-color: #a78bfa;
+}
+.platform-panel { display: none; }
+.platform-panel.is-active { display: block; }
+
+.platform-subtabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.platform-subtab {
+  padding: 8px 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.platform-subtab:hover { color: var(--text); }
+.platform-subtab.is-active {
+  color: #c4b5fd;
+  border-color: rgba(167, 139, 250, 0.45);
+  background: rgba(167, 139, 250, 0.12);
+}
+.platform-subpanel { display: none; }
+.platform-subpanel.is-active { display: block; }
+
+.operacional-toolbar {
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+}
+.operacional-toolbar .form-group { margin: 0; max-width: 320px; }
+
+.table--operacional td:last-child,
+.table--operacional td[data-label="Descricao"] {
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tenant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.tenants-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+}
+.tenants-toolbar__hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  max-width: 520px;
+  line-height: 1.5;
+}
+.tenants-toolbar__hint code {
+  font-size: 0.82rem;
+  color: #c4b5fd;
+}
+.modal--wide { max-width: 720px; }
+.modal-intro {
+  margin: 0 0 20px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.form-section-title {
+  margin: 0 0 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #c4b5fd;
+}
+.form-section-title:not(:first-of-type) { margin-top: 22px; }
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 640px) {
+  .form-row { grid-template-columns: 1fr; }
+}
+.tenant-card__meta {
+  margin: -8px 0 12px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+.tenant-card__meta span { display: block; }
+.tenant-card__id {
+  font-family: ui-monospace, monospace;
+  color: #c4b5fd;
+  font-size: 0.72rem;
+  margin-bottom: 4px;
+}
+.tenant-card {
+  padding: 20px 22px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  transition: border-color .15s, transform .15s;
+}
+.tenant-card:hover {
+  border-color: rgba(167, 139, 250, 0.35);
+  transform: translateY(-2px);
+}
+.tenant-card.is-inactive { opacity: 0.65; }
+.tenant-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.tenant-card__name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+}
+.tenant-card__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.tenant-card__stat {
+  text-align: center;
+  padding: 10px 8px;
+  background: var(--bg-2);
+  border-radius: var(--radius);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.tenant-card__stat strong {
+  display: block;
+  font-size: 1.15rem;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.tenant-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.users-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+}
+.users-toolbar .form-group { margin: 0; flex: 1; min-width: 180px; }
+
+.btn--icon {
+  padding: 8px 10px;
+  min-width: auto;
+}
+
+.pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pending-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+}
+.pending-card__info strong { display: block; margin-bottom: 4px; }
+.pending-card__info span { color: var(--text-muted); font-size: 0.88rem; }
+.pending-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.pending-card__actions .form-group { margin: 0; min-width: 140px; }
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-muted);
+  background: var(--bg-1);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+}
+
+@media (max-width: 960px) {
+  .platform-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .platform-stats { grid-template-columns: 1fr; }
+  .platform-hero__banner { padding: 22px 20px; border-radius: 18px; }
+  .platform-hero__lockup { gap: 16px; }
+  .platform-hero__logo { width: 48px; height: 48px; }
+  .users-toolbar { flex-direction: column; align-items: stretch; }
+  .pending-card { flex-direction: column; align-items: stretch; }
+}

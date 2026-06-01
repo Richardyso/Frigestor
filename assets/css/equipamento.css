@@ -1,0 +1,232 @@
+/* =========================================================
+   equipamento.css - Pagina publica (lida pelo QR)
+   Tema claro, otimizado para mobile e impressao A4
+   ========================================================= */
+
+:root {
+  --light-bg: #F4F7FB;
+  --light-card: #ffffff;
+  --light-text: #0A1626;
+  --light-muted: #5A6B82;
+  --light-border: #E2E8F0;
+  --brand: #0E3D7A;
+  --brand-accent: #1E5BB8;
+}
+
+body.public {
+  background: var(--light-bg);
+  color: var(--light-text);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.pub-shell {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 28px 20px 64px;
+}
+
+/* Topbar publica */
+.pub-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--brand);
+}
+.pub-brand {
+  display: flex; align-items: center; gap: 12px;
+  font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: -0.02em;
+  font-size: 1.3rem; color: var(--brand);
+}
+.pub-brand img { width: 44px; height: 44px; border-radius: 10px; }
+.pub-brand small {
+  display: block; font-family: 'Inter', sans-serif; font-weight: 500;
+  font-size: 0.7rem; color: var(--light-muted); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.pub-top__actions { display: flex; gap: 8px; }
+
+/* Botoes */
+.pub-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--brand);
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.pub-btn--ghost { background: transparent; color: var(--brand); }
+.pub-btn:hover { opacity: 0.92; }
+
+/* Card principal */
+.pub-hero {
+  background: linear-gradient(160deg, #0E3D7A, #1E5BB8);
+  color: #fff;
+  padding: 28px;
+  border-radius: 16px;
+  margin-bottom: 28px;
+  box-shadow: 0 14px 30px rgba(14,61,122,0.18);
+}
+.pub-hero__type {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+  font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase;
+  font-weight: 600; margin-bottom: 10px;
+}
+.pub-hero h1 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+  margin: 0 0 6px;
+  line-height: 1.15;
+}
+.pub-hero .cliente { font-size: 1.05rem; opacity: 0.88; margin: 0; }
+
+/* Grid de info */
+.pub-info {
+  background: var(--light-card);
+  border: 1px solid var(--light-border);
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.pub-info h2 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-size: 1.1rem;
+  margin: 0 0 16px;
+  color: var(--brand);
+}
+.pub-info dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 28px;
+  margin: 0;
+}
+.pub-info dt {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--light-muted);
+  margin-bottom: 2px;
+}
+.pub-info dd {
+  margin: 0 0 6px;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--light-text);
+}
+
+/* Historico */
+.pub-section-title {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin: 8px 0 14px;
+}
+.pub-section-title h2 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-size: 1.3rem;
+  margin: 0;
+  color: var(--brand);
+}
+.pub-section-title .count { font-size: 0.85rem; color: var(--light-muted); }
+
+.pub-visita {
+  background: var(--light-card);
+  border: 1px solid var(--light-border);
+  border-left: 4px solid var(--brand-accent);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  page-break-inside: avoid;
+}
+.pub-visita__head {
+  display: flex; justify-content: space-between; gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  border-bottom: 1px dashed var(--light-border);
+  padding-bottom: 8px;
+}
+.pub-visita__tipo {
+  display: inline-block;
+  padding: 3px 10px;
+  background: #E8F1FF;
+  color: var(--brand);
+  border-radius: 999px;
+  font-size: 0.74rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.pub-visita__data { color: var(--light-muted); font-size: 0.88rem; white-space: nowrap; }
+.pub-visita__tec { font-weight: 700; margin-top: 4px; }
+.pub-visita p { margin: 6px 0; font-size: 0.95rem; }
+.pub-visita p strong { color: var(--brand); }
+
+.pub-empty {
+  text-align: center;
+  padding: 28px;
+  background: var(--light-card);
+  border: 1px dashed var(--light-border);
+  border-radius: 12px;
+  color: var(--light-muted);
+}
+
+.pub-foot {
+  margin-top: 40px;
+  padding-top: 18px;
+  border-top: 1px solid var(--light-border);
+  display: flex; justify-content: space-between;
+  font-size: 0.82rem; color: var(--light-muted);
+  flex-wrap: wrap; gap: 8px;
+}
+
+/* Loading / erro */
+.pub-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+.pub-state h2 { color: var(--brand); }
+.pub-state p { color: var(--light-muted); }
+
+/* ====== RESPONSIVO ====== */
+@media (max-width: 640px) {
+  .pub-shell { padding: 18px 14px 40px; }
+  .pub-top { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .pub-top__actions { width: 100%; }
+  .pub-top__actions .pub-btn { flex: 1; justify-content: center; }
+  .pub-info dl { grid-template-columns: 1fr; gap: 10px; }
+  .pub-visita__head { flex-direction: column; gap: 6px; }
+}
+
+/* ====== IMPRESSAO A4 ====== */
+@media print {
+  body.public { background: #fff; font-size: 11.5pt; }
+  .pub-shell { max-width: none; padding: 0; }
+  .pub-top__actions, .pub-no-print { display: none !important; }
+  .pub-top { border-color: #000; }
+  .pub-hero {
+    background: #fff !important;
+    color: #000 !important;
+    border: 2px solid var(--brand);
+    box-shadow: none;
+    padding: 18px;
+  }
+  .pub-hero h1, .pub-hero .cliente, .pub-hero__type { color: #000 !important; }
+  .pub-hero__type { background: transparent; border: 1px solid #000; }
+  .pub-info { box-shadow: none; padding: 16px; }
+  .pub-visita { box-shadow: none; break-inside: avoid; }
+  /* Cabecalho repetido no topo de cada pagina impressa */
+  thead { display: table-header-group; }
+  .pub-foot { position: fixed; bottom: 0; width: 100%; }
+  a { color: inherit; text-decoration: none; }
+  @page { size: A4; margin: 14mm 12mm; }
+}

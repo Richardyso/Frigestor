@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Frigestor | Gestao inteligente de equipamentos em campo</title>
+  <meta name="description" content="Frigestor - Plataforma para cadastro de equipamentos, QR Code, historico de visitas e operacao em campo. Multi-empresa, acesso seguro para tecnicos e administradores." />
+  <meta property="og:title" content="Frigestor | Gestao inteligente" />
+  <meta property="og:description" content="Centralize equipamentos, visitas tecnicas e historico com QR Code para empresas de servico em campo." />
+  <meta property="og:image" content="assets/images/og-image.png" />
+  <link rel="icon" type="image/png" href="assets/images/favicon.png" />
+  <link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png" />
+  <link rel="manifest" href="assets/images/site.webmanifest" />
+  <meta name="theme-color" content="#062038" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="assets/css/global.css" />
+  <link rel="stylesheet" href="assets/css/index.css" />
+</head>
+<body class="landing">
+
+  <header class="topbar">
+    <div class="container topbar__inner">
+      <a href="/" class="topbar__brand">
+        <img src="assets/images/logo.png" alt="" class="brand-mark" width="40" height="40" />
+        <span class="brand-wordmark brand-wordmark--md"><span class="brand-wordmark__bold">FRI</span><span class="brand-wordmark__light">gestor</span></span>
+      </a>
+      <nav class="topbar__nav" aria-label="Navegacao principal">
+        <a href="#recursos">Recursos</a>
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#contato">Contato</a>
+        <a href="/pages/login.html" class="btn btn--ghost btn--sm">Entrar</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="container hero">
+      <div>
+        <span class="hero__eyebrow">Gestao inteligente</span>
+        <h1>Operacao em <span>campo</span> e historico de equipamentos em um so lugar.</h1>
+        <p class="lead">
+          A Frigestor e a plataforma que conecta empresas de servico tecnico aos seus
+          equipamentos: cadastro, QR Code, visitas, painel do tecnico e administracao
+          centralizada — com dados isolados por empresa.
+        </p>
+        <div class="hero__cta">
+          <a class="btn btn--accent" href="/pages/login.html">Entrar no sistema</a>
+          <a class="btn btn--ghost" href="/pages/cadastro.html">Fazer cadastro</a>
+        </div>
+      </div>
+      <div class="hero__visual" aria-hidden="true">
+        <div class="hero__visual-glow"></div>
+        <div class="hero__visual-ring"></div>
+        <div class="hero__lockup">
+          <img src="assets/images/logo.png" alt="" class="hero__lockup-icon" />
+          <p class="brand-wordmark brand-wordmark--lg hero__lockup-name">
+            <span class="brand-wordmark__bold">FRI</span><span class="brand-wordmark__light">gestor</span>
+          </p>
+          <p class="hero__lockup-tag">Gestao inteligente</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="recursos" class="section">
+      <div class="container">
+        <div class="section__title">
+          <small>Recursos</small>
+          <h2>Tudo que sua operacao precisa no dia a dia</h2>
+          <p>Ferramentas pensadas para tecnicos em campo e gestores que precisam de controle e rastreabilidade.</p>
+        </div>
+
+        <div class="services">
+          <article class="service">
+            <div class="service__icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M17 14h.01M20 14h.01M14 17h.01M17 17h.01M20 17h.01M14 20h.01M17 20h.01M20 20h.01"/></svg>
+            </div>
+            <h3>QR Code por equipamento</h3>
+            <p>Gere etiquetas com QR Code vinculadas ao historico completo de manutencoes, instalacoes e visitas.</p>
+          </article>
+
+          <article class="service">
+            <div class="service__icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <h3>Painel do tecnico</h3>
+            <p>Registre visitas, cadastre equipamentos no cliente e consulte historico direto do celular.</p>
+          </article>
+
+          <article class="service">
+            <div class="service__icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 6-6"/></svg>
+            </div>
+            <h3>Painel administrativo</h3>
+            <p>Gerencie equipamentos, filtros, tecnicos, edicao e exclusao com visao completa da operacao.</p>
+          </article>
+
+          <article class="service">
+            <div class="service__icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <h3>Acesso controlado</h3>
+            <p>Cadastros passam por aprovacao do gestor da plataforma antes de liberar o acesso a cada empresa.</p>
+          </article>
+
+          <article class="service">
+            <div class="service__icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <h3>Multi-empresa</h3>
+            <p>Cada cliente opera com dados isolados, configuracao propria e equipe independente na mesma plataforma.</p>
+          </article>
+
+          <article class="service">
+            <div class="service__icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <h3>Historico com data e hora</h3>
+            <p>Todas as visitas registradas com tipo de servico, tecnico responsavel e linha do tempo consultavel.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="como-funciona" class="section steps-section">
+      <div class="container">
+        <div class="section__title">
+          <small>Como funciona</small>
+          <h2>Da aprovacao a operacao em campo</h2>
+          <p>Fluxo simples para empresas que precisam organizar equipamentos e equipes tecnicas.</p>
+        </div>
+
+        <ol class="steps">
+          <li class="steps__item">
+            <span class="steps__num">1</span>
+            <h3>Solicite acesso</h3>
+            <p>Crie sua conta na plataforma. O gestor Frigestor analisa e habilita seu usuario na empresa correta.</p>
+          </li>
+          <li class="steps__item">
+            <span class="steps__num">2</span>
+            <h3>Cadastre equipamentos</h3>
+            <p>Registre aparelhos, clientes e localizacao. Gere QR Codes para consulta rapida no local.</p>
+          </li>
+          <li class="steps__item">
+            <span class="steps__num">3</span>
+            <h3>Opere em campo</h3>
+            <p>Tecnicos registram visitas; administradores acompanham historico, filtros e resumo da operacao.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="contato" class="section">
+      <div class="container">
+        <div class="section__title">
+          <small>Acesso</small>
+          <h2>Entre ou crie sua conta</h2>
+          <p>Use seu e-mail para entrar. Novos cadastros sao analisados pelo gestor Frigestor antes da liberacao na sua empresa.</p>
+        </div>
+
+        <div class="contact-cta contact-cta--single">
+          <div class="contact-cta__box">
+            <div class="contact-cta__actions">
+              <a class="btn btn--accent" href="/pages/login.html">Entrar no sistema</a>
+              <a class="btn btn--ghost" href="/pages/cadastro.html">Fazer cadastro</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="landing-foot">
+    <div class="container">
+      &copy; <span id="ano"></span> <strong>Frigestor</strong> — Gestao inteligente de equipamentos em campo.
+    </div>
+  </footer>
+
+  <script src="assets/js/index.js"></script>
+</body>
+</html>
