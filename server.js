@@ -29,13 +29,11 @@ const {
   buscarResetPorToken,
   normalizarEmail
 } = require('./lib/password-reset');
+const { resolveSiteUrl } = require('./lib/site-url');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SITE_URL = (
-  process.env.BASE_URL
-  || (process.env.VERCEL ? 'https://frigestor.vercel.app' : `http://localhost:${PORT}`)
-).replace(/\/$/, '');
+const SITE_URL = resolveSiteUrl();
 
 // --------------------------------------------------------------------------
 // Middlewares
