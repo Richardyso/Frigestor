@@ -2,6 +2,7 @@
   "name": "Frigestor",
   "short_name": "Frigestor",
   "description": "Gestao inteligente de equipamentos em campo",
+  "start_url": "https://frigestor.vercel.app/",
   "icons": [
     {
       "src": "/assets/images/favicon.png",

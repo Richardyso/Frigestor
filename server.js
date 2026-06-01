@@ -32,6 +32,10 @@ const {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const SITE_URL = (
+  process.env.BASE_URL
+  || (process.env.VERCEL ? 'https://frigestor.vercel.app' : `http://localhost:${PORT}`)
+).replace(/\/$/, '');
 
 // --------------------------------------------------------------------------
 // Middlewares
@@ -620,7 +624,7 @@ app.get('/env', (req, res) => {
     storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.FIREBASE_APP_ID,
-    baseUrl: process.env.BASE_URL || `http://localhost:${PORT}`
+    baseUrl: SITE_URL
   });
 });
 

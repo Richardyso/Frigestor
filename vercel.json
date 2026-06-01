@@ -1,5 +1,13 @@
 {
-  "version": 2,
-  "builds": [{ "src": "server.js", "use": "@vercel/node" }],
-  "routes": [{ "src": "/(.*)", "dest": "server.js" }]
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/env", "destination": "/api" }
+  ],
+  "redirects": [
+    {
+      "source": "/favicon.ico",
+      "destination": "/assets/images/favicon.png",
+      "permanent": false
+    }
+  ]
 }
