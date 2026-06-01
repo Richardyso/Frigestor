@@ -112,12 +112,10 @@
     const elSub = document.getElementById('pub-brand-sub');
     const elFoot = document.getElementById('pub-foot-contato');
     const elTel = document.getElementById('pub-foot-tel');
-    const elSite = document.getElementById('pub-site-link');
     if (elNome) elNome.textContent = nome;
     if (elSub) elSub.textContent = sub;
     if (elFoot) elFoot.textContent = email ? `${nome} - ${email}` : nome;
     if (elTel) elTel.textContent = tel || '';
-    if (elSite) elSite.textContent = `Site ${nome}`;
   }
 
   // -----------------------------------------------------------------------
