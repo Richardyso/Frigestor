@@ -1517,8 +1517,14 @@ app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Endpoint nao encontrado.' });
 });
 
-// Arquivos estaticos (HTML, CSS, JS, imagens) — depois das rotas /api
-app.use(express.static(__dirname, { extensions: ['html'] }));
+// Arquivos estaticos — local e fallback no serverless da Vercel
+const ROOT = __dirname;
+app.get('/', (_req, res) => {
+  res.sendFile(path.join(ROOT, 'index.html'));
+});
+app.use('/pages', express.static(path.join(ROOT, 'pages'), { extensions: ['html'] }));
+app.use('/assets', express.static(path.join(ROOT, 'assets')));
+app.use(express.static(ROOT, { extensions: ['html'], index: false }));
 
 // --------------------------------------------------------------------------
 // Sobe o servidor (local) ou exporta app (Vercel)
