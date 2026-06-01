@@ -4,7 +4,7 @@
  * Geracao, download e impressao do QR Code de cada equipamento.
  *
  * Dependencia: biblioteca QRCode.js (carregada via CDN nos HTMLs que usam):
- *   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+ *   <script src="/assets/js/vendor/qrcode.min.js"></script>
  *
  * O QR codifica a URL publica da pagina equipamento.html?id={id}.
  *
@@ -146,7 +146,7 @@
   <meta charset="UTF-8" />
   <title>Etiqueta QR - ${escapeHtml(nome)}</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <script src="/assets/js/vendor/qrcode.min.js"><\/script>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: #fff; color: #0A1626; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }

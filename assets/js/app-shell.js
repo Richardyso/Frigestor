@@ -12,6 +12,18 @@
     return role || '';
   }
 
+  /** Formata nome para exibicao (Carlos Antônio dos santos). */
+  function formatarNomeExibicao(nome) {
+    const partes = String(nome || '').trim().split(/\s+/).filter(Boolean);
+    if (!partes.length) return 'Usuario';
+    const minusculas = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
+    return partes.map((parte, i) => {
+      const lower = parte.toLocaleLowerCase('pt-BR');
+      if (i > 0 && minusculas.has(lower)) return lower;
+      return lower.charAt(0).toLocaleUpperCase('pt-BR') + lower.slice(1);
+    }).join(' ');
+  }
+
   async function renderHeader() {
     const u = window.AUTH?.usuarioAtual();
     if (!u || !document.querySelector('.app-header')) return;
@@ -20,7 +32,7 @@
     const empresaEl = document.getElementById('hdr-empresa');
     const catEl = document.getElementById('hdr-categoria');
 
-    if (nomeEl) nomeEl.textContent = (u.nome || '').split(' ')[0] || 'Usuario';
+    if (nomeEl) nomeEl.textContent = formatarNomeExibicao(u.nome);
     if (catEl) catEl.textContent = labelRole(u.role);
 
     if (!empresaEl) return;
