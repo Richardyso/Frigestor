@@ -10,8 +10,8 @@
 (function () {
   'use strict';
 
-  if (typeof window.initApp === 'function') {
-    window.initApp().then(() => {
+  if (window.frigestorReady) {
+    window.frigestorReady.then(() => {
       if (window.APP_SHELL) window.APP_SHELL.boot();
     });
   }

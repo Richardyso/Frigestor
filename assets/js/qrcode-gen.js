@@ -23,8 +23,16 @@
    * - Em PROD: substituir window.BASE_URL no /env retornado pelo servidor
    *   ou definir diretamente em window.BASE_URL antes do load do script.
    */
+  function publicBaseUrl() {
+    const raw = (window.BASE_URL || window.location.origin).replace(/\/$/, '');
+    if (/localhost|127\.0\.0\.1/i.test(raw) && !/localhost|127\.0\.0\.1/i.test(window.location.hostname)) {
+      return window.location.origin.replace(/\/$/, '');
+    }
+    return raw;
+  }
+
   function urlPublica(equipamentoId, tenantId) {
-    const base = (window.BASE_URL || window.location.origin).replace(/\/$/, '');
+    const base = publicBaseUrl();
     const tenant = tenantId
       || window.AUTH?.usuarioAtual()?.tenantId
       || '';

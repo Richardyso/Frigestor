@@ -528,7 +528,10 @@
   // -----------------------------------------------------------------------
   // Boot
   // -----------------------------------------------------------------------
-  carregarTudo();
+  (async function boot() {
+    if (typeof window.initApp === 'function') await window.initApp();
+    await carregarTudo();
+  })();
 })();
 
 // TODO: Firestore Security Rules

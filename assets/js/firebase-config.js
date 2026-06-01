@@ -17,13 +17,56 @@
 (function () {
   'use strict';
 
+  const PRODUCTION_ORIGIN = 'https://frigestor.vercel.app';
+
+  function isLocalHost(hostname) {
+    return /^(localhost|127\.0\.0\.1)$/i.test(hostname || '');
+  }
+
+  function devLocalEnabled() {
+    return /[?&]local=1(?:&|$)/.test(window.location.search)
+      || localStorage.getItem('frigestor.devLocal') === '1';
+  }
+
+  function sanitizeBaseUrl(url) {
+    const raw = String(url || '').trim().replace(/\/$/, '');
+    if (!raw) return window.location.origin;
+    try {
+      if (isLocalHost(new URL(raw).hostname) && !isLocalHost(window.location.hostname)) {
+        return window.location.origin;
+      }
+    } catch (_) {
+      return window.location.origin;
+    }
+    return raw;
+  }
+
+  function resolveApiUrl(url) {
+    if (/^https?:\/\//i.test(url)) return url;
+    const path = url.startsWith('/') ? url : `/${url}`;
+    return `${window.location.origin}${path}`;
+  }
+
+  // Evita abrir paginas internas em localhost sem servidor (links/e-mails antigos).
+  if (isLocalHost(window.location.hostname) && !devLocalEnabled()) {
+    fetch(resolveApiUrl('/env'), { cache: 'no-store' })
+      .then((res) => {
+        if (!res.ok) throw new Error('env indisponivel');
+      })
+      .catch(() => {
+        window.location.replace(
+          PRODUCTION_ORIGIN + window.location.pathname + window.location.search + window.location.hash
+        );
+      });
+  }
+
   // ------------------------------------------------------------------------
   // Estado global de ambiente
   // ------------------------------------------------------------------------
   window.ENV = window.ENV || {};
 
-  // BASE_URL do site (usado nos QR Codes etc). Em producao, defina via /env.
-  window.BASE_URL = window.location.origin;
+  // BASE_URL do site (QR Codes, links publicos). Nunca usa localhost em producao.
+  window.BASE_URL = sanitizeBaseUrl(window.location.origin);
 
   const STORAGE_KEY = 'frigestor.sessao';
 
@@ -57,7 +100,7 @@
       }
     }
     delete opts.skipTenant;
-    const res = await fetch(url, { ...opts, headers });
+    const res = await fetch(resolveApiUrl(url), { ...opts, headers });
     let data = null;
     try { data = await res.json(); } catch (_) { /* corpo vazio */ }
     if (!res.ok) {
@@ -79,7 +122,7 @@
       try {
         const env = await jsonFetch('/env');
         window.ENV = env || {};
-        if (env && env.baseUrl) window.BASE_URL = env.baseUrl;
+        if (env && env.baseUrl) window.BASE_URL = sanitizeBaseUrl(env.baseUrl);
       } catch (err) {
         console.warn('[firebase-config] Falha ao carregar /env:', err.message);
       }
@@ -87,6 +130,8 @@
     })();
     return initPromise;
   };
+
+  window.frigestorReady = window.initApp();
 
   // ========================================================================
   // window.TENANT - configuracao da empresa (tenant) logada
