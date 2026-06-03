@@ -108,17 +108,6 @@
     document.getElementById('stat-equip').textContent = equipamentos.length;
     document.getElementById('stat-tec').textContent = usuarios.filter((u) => u.role === 'tecnico' && u.ativo).length;
     document.getElementById('stat-vis').textContent = visitas.length;
-
-    if (equipamentos.length) {
-      const maisRecente = equipamentos.reduce((acc, e) => {
-        return (!acc || new Date(e.atualizadoEm) > new Date(acc.atualizadoEm)) ? e : acc;
-      }, null);
-      document.getElementById('stat-upd').textContent = UI.formatarData(maisRecente.atualizadoEm);
-      document.getElementById('stat-upd-equip').textContent = maisRecente.nomeModelo;
-    } else {
-      document.getElementById('stat-upd').textContent = '-';
-      document.getElementById('stat-upd-equip').textContent = 'sem equipamentos';
-    }
   }
 
   // -----------------------------------------------------------------------

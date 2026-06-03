@@ -638,7 +638,7 @@ async function criarTenantCompleto(payload) {
   };
   await escreverJson(path.join(id, 'usuarios.json'), [admin]);
 
-  await sendContaCriadaPeloAdminEmail(admin.email, admin.nome);
+  await sendContaCriadaPeloAdminEmail(admin.email, admin.nome, admin.email, String(adminSenha));
 
   return { tenant: novoTenant, admin: omitirSenhaUsuario({ ...admin, tenantId: id }) };
 }
@@ -979,7 +979,7 @@ app.post('/api/usuarios', async (req, res) => {
     };
     usuarios.push(novo);
     await escreverTenantJson(tenantId, 'usuarios.json', usuarios);
-    await sendContaCriadaPeloAdminEmail(novo.email, novo.nome);
+    await sendContaCriadaPeloAdminEmail(novo.email, novo.nome, novo.email, String(senha));
     const { senha: _omit, ...sem } = novo;
     res.status(201).json({ ...sem, tenantId });
   } catch (err) {
@@ -1437,7 +1437,7 @@ app.post('/api/plataforma/tenants/:tenantId/usuarios', async (req, res) => {
     };
     usuarios.push(novo);
     await escreverJson(path.join(tenantId, 'usuarios.json'), usuarios);
-    await sendContaCriadaPeloAdminEmail(novo.email, novo.nome);
+    await sendContaCriadaPeloAdminEmail(novo.email, novo.nome, novo.email, String(senha));
     res.status(201).json({ ...omitirSenhaUsuario(novo), tenantId });
   } catch (err) {
     console.error('[POST /api/plataforma/tenants/:tenantId/usuarios]', err);
