@@ -20,7 +20,12 @@ const fs = require('fs').promises;
 const crypto = require('crypto');
 const { lerJson, escreverJson, usarFirestore, DATA_DIR } = require('./lib/data-store');
 const { verifyGoogleIdToken } = require('./lib/firebase-admin');
-const { sendWelcomeEmail, sendActivationEmail, sendPasswordResetCodeEmail } = require('./lib/email');
+const {
+  sendWelcomeEmail,
+  sendActivationEmail,
+  sendContaCriadaPeloAdminEmail,
+  sendPasswordResetCodeEmail
+} = require('./lib/email');
 const { hashSenha, hashSenhaSeNecessario, verificarSenha } = require('./lib/password');
 const {
   criarSolicitacao,
@@ -30,6 +35,7 @@ const {
   normalizarEmail
 } = require('./lib/password-reset');
 const { resolveSiteUrl } = require('./lib/site-url');
+const { googleOAuthHabilitado, cadastroPublicoHabilitado } = require('./lib/auth-flags');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -488,6 +494,30 @@ async function lerClientesTenant(tenantId) {
   }
 }
 
+function normalizarAreasCliente(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) {
+    return val.map((a) => String(a).trim()).filter(Boolean);
+  }
+  if (typeof val === 'string') {
+    return val.split(/[\n,;]+/).map((a) => a.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function normalizarClientePayload(body, existente = null) {
+  const nome = String(body.nome ?? existente?.nome ?? '').trim();
+  const endereco = String(body.endereco ?? existente?.endereco ?? '').trim();
+  const cnpjRaw = body.cnpj != null ? body.cnpj : existente?.cnpj;
+  const cnpj = cnpjRaw != null && String(cnpjRaw).trim() ? String(cnpjRaw).trim() : '';
+  const areas = 'areas' in (body || {})
+    ? normalizarAreasCliente(body.areas)
+    : (existente?.areas || []);
+  const obsRaw = body.observacoes != null ? body.observacoes : existente?.observacoes;
+  const observacoes = obsRaw != null ? String(obsRaw).trim() : '';
+  return { nome, endereco, cnpj, areas, observacoes };
+}
+
 async function validarClienteEmpresa(tenantId, nome) {
   if (!nome || !String(nome).trim()) {
     return 'Cliente/empresa e obrigatorio.';
@@ -608,6 +638,8 @@ async function criarTenantCompleto(payload) {
   };
   await escreverJson(path.join(id, 'usuarios.json'), [admin]);
 
+  await sendContaCriadaPeloAdminEmail(admin.email, admin.nome);
+
   return { tenant: novoTenant, admin: omitirSenhaUsuario({ ...admin, tenantId: id }) };
 }
 
@@ -706,6 +738,9 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 app.post('/api/auth/google', async (req, res) => {
+  if (!googleOAuthHabilitado()) {
+    return res.status(403).json({ error: 'Login com Google desativado.' });
+  }
   try {
     const tok = await validarTokenGoogle(req.body?.idToken);
     if (tok.erro) return res.status(tok.erro).json({ error: tok.msg });
@@ -728,6 +763,9 @@ app.post('/api/auth/google', async (req, res) => {
 });
 
 app.post('/api/auth/google/cadastro', async (req, res) => {
+  if (!googleOAuthHabilitado()) {
+    return res.status(403).json({ error: 'Cadastro com Google desativado.' });
+  }
   try {
     const tok = await validarTokenGoogle(req.body?.idToken);
     if (tok.erro) return res.status(tok.erro).json({ error: tok.msg });
@@ -757,6 +795,9 @@ app.post('/api/auth/google/cadastro', async (req, res) => {
 
 // Cadastro publico — usuario fica pendente ate aprovacao do gestor Frigestor
 app.post('/api/auth/cadastro', async (req, res) => {
+  if (!cadastroPublicoHabilitado()) {
+    return res.status(403).json({ error: 'Cadastro publico desativado.' });
+  }
   try {
     const { nome, email, senha } = req.body || {};
     if (!nome || !email || !senha) {
@@ -938,6 +979,7 @@ app.post('/api/usuarios', async (req, res) => {
     };
     usuarios.push(novo);
     await escreverTenantJson(tenantId, 'usuarios.json', usuarios);
+    await sendContaCriadaPeloAdminEmail(novo.email, novo.nome);
     const { senha: _omit, ...sem } = novo;
     res.status(201).json({ ...sem, tenantId });
   } catch (err) {
@@ -1007,18 +1049,24 @@ app.post('/api/clientes', async (req, res) => {
   try {
     const tenantId = tenantIdFromReq(req);
     if (!tenantId) return res.status(400).json({ error: 'tenantId e obrigatorio.' });
-    const { nome } = req.body || {};
-    if (!nome || String(nome).trim().length < 2) {
+    const dados = normalizarClientePayload(req.body || {});
+    if (!dados.nome || dados.nome.length < 2) {
       return res.status(400).json({ error: 'Informe o nome do cliente (minimo 2 caracteres).' });
     }
+    if (!dados.endereco || dados.endereco.length < 5) {
+      return res.status(400).json({ error: 'Informe o endereco completo do cliente.' });
+    }
     const clientes = await lerClientesTenant(tenantId);
-    const nomeNorm = String(nome).trim();
-    if (clientes.some((c) => c.nome.toLowerCase() === nomeNorm.toLowerCase())) {
+    if (clientes.some((c) => c.nome.toLowerCase() === dados.nome.toLowerCase())) {
       return res.status(409).json({ error: 'Ja existe um cliente com este nome.' });
     }
     const novo = {
       id: gerarId('cli'),
-      nome: nomeNorm,
+      nome: dados.nome,
+      endereco: dados.endereco,
+      cnpj: dados.cnpj || null,
+      areas: dados.areas,
+      observacoes: dados.observacoes || null,
       ativo: true,
       criadoEm: agoraISO()
     };
@@ -1038,15 +1086,27 @@ app.patch('/api/clientes/:id', async (req, res) => {
     const clientes = await lerClientesTenant(tenantId);
     const idx = clientes.findIndex((c) => c.id === req.params.id);
     if (idx === -1) return res.status(404).json({ error: 'Cliente nao encontrado.' });
-    if ('nome' in req.body) {
-      const nomeNorm = String(req.body.nome).trim();
-      if (nomeNorm.length < 2) return res.status(400).json({ error: 'Nome invalido.' });
-      if (clientes.some((c, i) => i !== idx && c.nome.toLowerCase() === nomeNorm.toLowerCase())) {
-        return res.status(409).json({ error: 'Ja existe um cliente com este nome.' });
-      }
-      clientes[idx].nome = nomeNorm;
+    const body = req.body || {};
+    const campos = Object.keys(body);
+    if (campos.length === 1 && campos[0] === 'ativo') {
+      clientes[idx].ativo = !!body.ativo;
+      clientes[idx].atualizadoEm = agoraISO();
+      await escreverJson(path.join(tenantId, 'clientes.json'), clientes);
+      return res.json(clientes[idx]);
     }
+    const dados = normalizarClientePayload(body, clientes[idx]);
+    if (dados.nome.length < 2) return res.status(400).json({ error: 'Nome invalido.' });
+    if (dados.endereco.length < 5) return res.status(400).json({ error: 'Endereco invalido.' });
+    if (clientes.some((c, i) => i !== idx && c.nome.toLowerCase() === dados.nome.toLowerCase())) {
+      return res.status(409).json({ error: 'Ja existe um cliente com este nome.' });
+    }
+    clientes[idx].nome = dados.nome;
+    clientes[idx].endereco = dados.endereco;
+    clientes[idx].cnpj = dados.cnpj || null;
+    clientes[idx].areas = dados.areas;
+    clientes[idx].observacoes = dados.observacoes || null;
     if ('ativo' in req.body) clientes[idx].ativo = !!req.body.ativo;
+    clientes[idx].atualizadoEm = agoraISO();
     await escreverJson(path.join(tenantId, 'clientes.json'), clientes);
     res.json(clientes[idx]);
   } catch (err) {
@@ -1377,6 +1437,7 @@ app.post('/api/plataforma/tenants/:tenantId/usuarios', async (req, res) => {
     };
     usuarios.push(novo);
     await escreverJson(path.join(tenantId, 'usuarios.json'), usuarios);
+    await sendContaCriadaPeloAdminEmail(novo.email, novo.nome);
     res.status(201).json({ ...omitirSenhaUsuario(novo), tenantId });
   } catch (err) {
     console.error('[POST /api/plataforma/tenants/:tenantId/usuarios]', err);

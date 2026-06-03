@@ -127,6 +127,8 @@
             <thead>
               <tr>
                 <th>Nome</th>
+                <th>Endereco</th>
+                <th>Areas</th>
                 <th>Status</th>
                 <th>Acoes</th>
               </tr>
@@ -304,9 +306,9 @@
 
   <!-- MODAL: NOVO CLIENTE -->
   <div class="modal-backdrop" id="modal-cliente">
-    <div class="modal">
+    <div class="modal modal--wide">
       <div class="modal__header">
-        <h3>Cadastrar cliente</h3>
+        <h3 id="modal-cliente-titulo">Cadastrar cliente</h3>
         <button class="modal__close" data-close="modal-cliente">&times;</button>
       </div>
       <div class="modal__body">
@@ -314,6 +316,26 @@
           <div class="form-group">
             <label class="form-label" for="cliente-nome">Nome da empresa-cliente *</label>
             <input class="form-control" id="cliente-nome" required placeholder="Ex: Shopping Center Norte" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cliente-endereco">Endereco completo *</label>
+            <textarea class="form-control" id="cliente-endereco" rows="2" required placeholder="Rua, numero, bairro, cidade, UF, CEP"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="cliente-cnpj">CNPJ <span class="form-label__hint">(opcional)</span></label>
+              <input class="form-control" id="cliente-cnpj" placeholder="00.000.000/0000-00" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Areas / ambientes <span class="form-label__hint">(opcional)</span></label>
+            <div id="cliente-areas-list" class="areas-list"></div>
+            <button type="button" class="btn btn--ghost btn--sm" id="btn-add-area">+ Adicionar ambiente</button>
+            <span class="form-label__hint">Ex.: Recepcao, Cozinha, Salao principal</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="cliente-obs">Observacoes <span class="form-label__hint">(opcional)</span></label>
+            <textarea class="form-control" id="cliente-obs" rows="3" placeholder="Informacoes uteis para a equipe em campo"></textarea>
           </div>
           <div class="form-actions">
             <button type="button" class="btn btn--ghost" data-close="modal-cliente">Cancelar</button>

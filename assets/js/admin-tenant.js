@@ -439,22 +439,75 @@
   // -----------------------------------------------------------------------
   // Clientes (empresas atendidas)
   // -----------------------------------------------------------------------
+  let clienteEditandoId = null;
+
+  function resumoAreas(c) {
+    const lista = Array.isArray(c.areas) ? c.areas : [];
+    if (!lista.length) return '—';
+    if (lista.length <= 2) return lista.map((a) => UI.escapeHtml(a)).join(', ');
+    return `${UI.escapeHtml(lista[0])}, ${UI.escapeHtml(lista[1])} +${lista.length - 2}`;
+  }
+
+  function limparFormCliente() {
+    clienteEditandoId = null;
+    document.getElementById('modal-cliente-titulo').textContent = 'Cadastrar cliente';
+    document.getElementById('form-cliente')?.reset();
+    const lista = document.getElementById('cliente-areas-list');
+    if (lista) lista.innerHTML = '';
+  }
+
+  function adicionarCampoArea(valor = '') {
+    const lista = document.getElementById('cliente-areas-list');
+    if (!lista) return;
+    const row = document.createElement('div');
+    row.className = 'areas-list__row';
+    row.innerHTML = `
+      <input type="text" class="form-control cliente-area-input" placeholder="Ex: Recepcao" value="${UI.escapeHtml(valor)}" />
+      <button type="button" class="btn btn--ghost btn--sm" data-a="rem-area" title="Remover">&times;</button>
+    `;
+    row.querySelector('[data-a="rem-area"]').addEventListener('click', () => row.remove());
+    lista.appendChild(row);
+  }
+
+  function lerAreasDoFormulario() {
+    return Array.from(document.querySelectorAll('.cliente-area-input'))
+      .map((inp) => inp.value.trim())
+      .filter(Boolean);
+  }
+
+  function preencherFormCliente(c) {
+    clienteEditandoId = c.id;
+    document.getElementById('modal-cliente-titulo').textContent = 'Editar cliente';
+    document.getElementById('cliente-nome').value = c.nome || '';
+    document.getElementById('cliente-endereco').value = c.endereco || '';
+    document.getElementById('cliente-cnpj').value = c.cnpj || '';
+    document.getElementById('cliente-obs').value = c.observacoes || '';
+    const lista = document.getElementById('cliente-areas-list');
+    if (lista) lista.innerHTML = '';
+    const areas = Array.isArray(c.areas) ? c.areas : [];
+    if (areas.length) areas.forEach((a) => adicionarCampoArea(a));
+    else adicionarCampoArea('');
+  }
+
   function renderClientes() {
     const tbody = document.getElementById('tbl-clientes');
     if (!tbody) return;
     if (!clientes.length) {
-      tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum cliente cadastrado.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum cliente cadastrado.</td></tr>';
       return;
     }
     tbody.innerHTML = clientes
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
       .map((c) => `
         <tr data-id="${UI.escapeHtml(c.id)}">
-          <td data-label="Nome"><strong>${UI.escapeHtml(c.nome)}</strong></td>
+          <td data-label="Nome"><strong>${UI.escapeHtml(c.nome)}</strong>${c.cnpj ? `<br/><span class="text-dim cell-sub">${UI.escapeHtml(c.cnpj)}</span>` : ''}</td>
+          <td data-label="Endereco">${UI.escapeHtml(c.endereco || '—')}</td>
+          <td data-label="Areas">${resumoAreas(c)}</td>
           <td data-label="Status">
             <span class="badge ${c.ativo !== false ? 'badge--success' : 'badge--muted'}">${c.ativo !== false ? 'Ativo' : 'Inativo'}</span>
           </td>
-          <td data-label="Acoes">
+          <td data-label="Acoes" class="cell-actions">
+            <button type="button" class="btn btn--ghost btn--sm" data-a="edit">Editar</button>
             <button type="button" class="btn btn--ghost btn--sm" data-a="toggle">${c.ativo !== false ? 'Desativar' : 'Ativar'}</button>
           </td>
         </tr>
@@ -462,7 +515,13 @@
 
     tbody.querySelectorAll('tr').forEach((tr) => {
       const id = tr.dataset.id;
-      tr.querySelector('[data-a="toggle"]').addEventListener('click', () => toggleCliente(id));
+      tr.querySelector('[data-a="toggle"]')?.addEventListener('click', () => toggleCliente(id));
+      tr.querySelector('[data-a="edit"]')?.addEventListener('click', () => {
+        const c = clientes.find((x) => x.id === id);
+        if (!c) return;
+        preencherFormCliente(c);
+        abrirModal('modal-cliente');
+      });
     });
   }
 
@@ -479,21 +538,36 @@
   }
 
   document.getElementById('btn-novo-cliente')?.addEventListener('click', () => {
-    document.getElementById('form-cliente').reset();
+    limparFormCliente();
+    adicionarCampoArea('');
     abrirModal('modal-cliente');
   });
+
+  document.getElementById('btn-add-area')?.addEventListener('click', () => adicionarCampoArea(''));
 
   document.getElementById('form-cliente')?.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const form = document.getElementById('form-cliente');
     if (!form.reportValidity()) return;
-    const nome = document.getElementById('cliente-nome').value.trim();
+    const payload = {
+      nome: document.getElementById('cliente-nome').value.trim(),
+      endereco: document.getElementById('cliente-endereco').value.trim(),
+      cnpj: document.getElementById('cliente-cnpj').value.trim(),
+      areas: lerAreasDoFormulario(),
+      observacoes: document.getElementById('cliente-obs').value.trim()
+    };
     const btn = document.getElementById('btn-salvar-cliente');
     const fim = window.UI.botaoLoading(btn, 'Salvando...');
     try {
-      await window.DB.clientes.criar({ nome });
-      window.UI.toast('Cliente cadastrado!', 'success');
+      if (clienteEditandoId) {
+        await window.DB.clientes.atualizar(clienteEditandoId, payload);
+        window.UI.toast('Cliente atualizado!', 'success');
+      } else {
+        await window.DB.clientes.criar(payload);
+        window.UI.toast('Cliente cadastrado!', 'success');
+      }
       fecharModal('modal-cliente');
+      limparFormCliente();
       await carregarTudo();
     } catch (err) {
       window.UI.toast(err.message, 'danger');

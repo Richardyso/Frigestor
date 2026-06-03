@@ -348,3 +348,8 @@ main.admin-tenant {
   .filters { grid-template-columns: 1fr; }
   .filters .form-group:nth-child(1) { grid-column: auto; }
 }
+
+.areas-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.areas-list__row { display: flex; gap: 8px; align-items: center; }
+.areas-list__row .form-control { flex: 1; }
+.cell-actions { white-space: nowrap; }
