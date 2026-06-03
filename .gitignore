@@ -7,3 +7,6 @@ node_modules/
 npm-debug.log*
 .vscode/
 .idea/
+
+# Modelos de contrato e proposta comercial (uso local; nao versionar)
+docs/contratos/
