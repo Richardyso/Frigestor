@@ -38,7 +38,14 @@
       : { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
   function esc(t) {
-    return window.UI ? window.UI.escapeHtml(t) : String(t || '');
+    const s = String(t ?? '');
+    if (window.UI && window.UI.escapeHtml) return window.UI.escapeHtml(s);
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   // -----------------------------------------------------------------------
@@ -141,7 +148,7 @@
         root.innerHTML = `
           <div class="pub-state">
             <h2>Falha ao carregar</h2>
-            <p>${err.message || 'Erro desconhecido. Tente novamente.'}</p>
+            <p>${esc(err.message || 'Erro desconhecido. Tente novamente.')}</p>
           </div>`;
       }
     }

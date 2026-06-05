@@ -16,6 +16,9 @@
   "routes": [
     { "src": "/api/(.*)", "dest": "api/index.js" },
     { "src": "/env", "dest": "api/index.js" },
+    { "src": "/pages/admin.html", "dest": "api/index.js" },
+    { "src": "/pages/admin-tenant.html", "dest": "api/index.js" },
+    { "src": "/pages/campo.html", "dest": "api/index.js" },
     { "src": "/favicon.ico", "dest": "/assets/images/favicon.png" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/$1" }

@@ -14,6 +14,8 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
+const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
 const { lerJson, escreverJson, tenantDocExiste } = require('./lib/data-store');
 const { verifyGoogleIdToken } = require('./lib/firebase-admin');
 const {
@@ -32,6 +34,17 @@ const {
 } = require('./lib/password-reset');
 const { resolveSiteUrl } = require('./lib/site-url');
 const { googleOAuthHabilitado, cadastroPublicoHabilitado } = require('./lib/auth-flags');
+const { verifyToken, extrairToken, responderAutenticado, clearAuthCookie } = require('./lib/auth-token');
+const {
+  authenticate,
+  requireSuperAdmin,
+  requireTenantMember,
+  requireTenantAdmin,
+  tenantIdAutenticado,
+  requirePageRoles,
+  servirPaginaInterna,
+  forbidden
+} = require('./lib/auth-middleware');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -40,6 +53,8 @@ const SITE_URL = resolveSiteUrl();
 // --------------------------------------------------------------------------
 // Middlewares
 // --------------------------------------------------------------------------
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
 
 function gerarId(prefixo) {
@@ -349,18 +364,6 @@ async function listarVisitasTenant(tenantId, equipamentoId) {
   if (equipamentoId) visitas = visitas.filter((v) => v.equipamentoId === equipamentoId);
   visitas.sort((a, b) => new Date(b.dataVisita) - new Date(a.dataVisita));
   return visitas;
-}
-
-function isSuperAdminReq(req) {
-  return req.headers['x-session-role'] === 'super_admin';
-}
-
-function requireSuperAdmin(req, res) {
-  if (!isSuperAdminReq(req)) {
-    res.status(403).json({ error: 'Acesso restrito ao administrador da plataforma.' });
-    return false;
-  }
-  return true;
 }
 
 async function lerTodosTenantsComStats() {
@@ -693,8 +696,7 @@ app.post('/api/auth/login', async (req, res) => {
       if (!usuario.ativo || usuario.role !== 'super_admin') {
         return res.status(403).json({ error: 'Conta desativada. Contate o administrador.' });
       }
-      const { senha: _omit, ...sem } = usuario;
-      return res.json({ ...sem, tenantId: null });
+      return responderAutenticado(res, usuario, null);
     }
 
     const resultado = await buscarUsuarioLogin(email, senha);
@@ -721,12 +723,16 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
-    const { senha: _omit, ...sem } = usuario;
-    res.json({ ...sem, tenantId });
+    return responderAutenticado(res, usuario, tenantId);
   } catch (err) {
     console.error('[POST /api/auth/login]', err);
     res.status(500).json({ error: 'Erro interno.' });
   }
+});
+
+app.post('/api/auth/logout', (_req, res) => {
+  clearAuthCookie(res);
+  res.json({ ok: true });
 });
 
 app.post('/api/auth/google', async (req, res) => {
@@ -747,7 +753,8 @@ app.post('/api/auth/google', async (req, res) => {
       return res.status(resultado.erro).json(body);
     }
 
-    res.json(resultado.ok);
+    const u = resultado.ok;
+    return responderAutenticado(res, { uid: u.uid, nome: u.nome, email: u.email, role: u.role, ativo: u.ativo }, u.tenantId);
   } catch (err) {
     console.error('[POST /api/auth/google]', err);
     res.status(500).json({ error: 'Erro interno.' });
@@ -931,12 +938,9 @@ app.post('/api/auth/redefinir-senha', async (req, res) => {
 });
 
 // ----- USUARIOS -----------------------------------------------------------
-app.get('/api/usuarios', async (req, res) => {
+app.get('/api/usuarios', authenticate, requireTenantMember, async (req, res) => {
   try {
-    const tenantId = tenantIdFromReq(req);
-    if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId e obrigatorio.' });
-    }
+    const tenantId = tenantIdAutenticado(req);
     const usuarios = await lerTenantJson(tenantId, 'usuarios.json');
     res.json(usuarios.map(({ senha, ...u }) => ({ ...u, tenantId })));
   } catch (err) {
@@ -945,16 +949,13 @@ app.get('/api/usuarios', async (req, res) => {
   }
 });
 
-app.post('/api/usuarios', async (req, res) => {
+app.post('/api/usuarios', authenticate, requireTenantAdmin, async (req, res) => {
   try {
-    const { nome, email, senha, role, tenantId: bodyTenant } = req.body || {};
+    const { nome, email, senha, role } = req.body || {};
     if (!nome || !email || !senha) {
       return res.status(400).json({ error: 'Nome, email e senha sao obrigatorios.' });
     }
-    const tenantId = bodyTenant || tenantIdFromReq(req);
-    if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId e obrigatorio.' });
-    }
+    const tenantId = tenantIdAutenticado(req);
     if (await emailJaCadastrado(email)) {
       return res.status(409).json({ error: 'Ja existe um usuario com esse email.' });
     }
@@ -980,21 +981,47 @@ app.post('/api/usuarios', async (req, res) => {
   }
 });
 
-app.patch('/api/usuarios/:uid', async (req, res) => {
+app.patch('/api/usuarios/:uid', authenticate, requireTenantMember, async (req, res) => {
   try {
     const { uid } = req.params;
-    const hint = tenantIdFromReq(req);
-    const local = await localizarUsuario(uid, hint);
-    if (!local) return res.status(404).json({ error: 'Usuario nao encontrado.' });
+    const tenantId = tenantIdAutenticado(req);
+    const local = await localizarUsuario(uid, tenantId);
+    if (!local || local.tenantId !== tenantId) {
+      return res.status(404).json({ error: 'Usuario nao encontrado.' });
+    }
 
-    const { tenantId, usuarios, idx } = local;
+    const isAdmin = req.auth.role === 'admin';
+    const isSelf = req.auth.uid === uid;
+    if (!isAdmin && !isSelf) return forbidden(res);
+
+    const body = req.body || {};
+    const camposPrivilegiados = ['role', 'ativo', 'status'];
+    for (const c of camposPrivilegiados) {
+      if (c in body && !isAdmin) {
+        return forbidden(res, 'Apenas administradores podem alterar este campo.');
+      }
+    }
+    if ('role' in body && isSelf) {
+      return forbidden(res, 'Nao e permitido alterar o proprio papel.');
+    }
+    if ('senha' in body && !isAdmin && !isSelf) {
+      return forbidden(res);
+    }
+    if (!isAdmin && isSelf) {
+      const extras = Object.keys(body).filter((k) => !['nome', 'email', 'senha'].includes(k));
+      if (extras.length) {
+        return forbidden(res, 'Voce so pode alterar nome, e-mail ou senha.');
+      }
+    }
+
+    const { usuarios, idx } = local;
     const estavaInativo = usuarios[idx].ativo === false;
     const camposPermitidos = ['nome', 'email', 'ativo', 'senha', 'role', 'status'];
     for (const c of camposPermitidos) {
-      if (c in req.body) {
+      if (c in body) {
         usuarios[idx][c] = c === 'senha'
-          ? await hashSenhaSeNecessario(req.body[c])
-          : req.body[c];
+          ? await hashSenhaSeNecessario(body[c])
+          : body[c];
       }
     }
     await escreverTenantJson(tenantId, 'usuarios.json', usuarios);
@@ -1013,10 +1040,9 @@ app.patch('/api/usuarios/:uid', async (req, res) => {
 });
 
 // ----- CLIENTES (empresas atendidas pelo tenant) --------------------------
-app.get('/api/clientes', async (req, res) => {
+app.get('/api/clientes', authenticate, requireTenantMember, async (req, res) => {
   try {
-    const tenantId = tenantIdFromReq(req);
-    if (!tenantId) return res.status(400).json({ error: 'tenantId e obrigatorio.' });
+    const tenantId = tenantIdAutenticado(req);
     const clientes = await lerClientesTenant(tenantId);
     const incluirInativos = req.query.incluirInativos === '1' || req.query.incluirInativos === 'true';
     res.json(incluirInativos ? clientes : clientes.filter((c) => c.ativo !== false));
@@ -1026,10 +1052,9 @@ app.get('/api/clientes', async (req, res) => {
   }
 });
 
-app.get('/api/clientes/todos', async (req, res) => {
+app.get('/api/clientes/todos', authenticate, requireTenantMember, async (req, res) => {
   try {
-    const tenantId = tenantIdFromReq(req);
-    if (!tenantId) return res.status(400).json({ error: 'tenantId e obrigatorio.' });
+    const tenantId = tenantIdAutenticado(req);
     res.json(await lerClientesTenant(tenantId));
   } catch (err) {
     console.error('[GET /api/clientes/todos]', err);
@@ -1037,10 +1062,9 @@ app.get('/api/clientes/todos', async (req, res) => {
   }
 });
 
-app.post('/api/clientes', async (req, res) => {
+app.post('/api/clientes', authenticate, requireTenantAdmin, async (req, res) => {
   try {
-    const tenantId = tenantIdFromReq(req);
-    if (!tenantId) return res.status(400).json({ error: 'tenantId e obrigatorio.' });
+    const tenantId = tenantIdAutenticado(req);
     const dados = normalizarClientePayload(req.body || {});
     if (!dados.nome || dados.nome.length < 2) {
       return res.status(400).json({ error: 'Informe o nome do cliente (minimo 2 caracteres).' });
@@ -1071,10 +1095,9 @@ app.post('/api/clientes', async (req, res) => {
   }
 });
 
-app.patch('/api/clientes/:id', async (req, res) => {
+app.patch('/api/clientes/:id', authenticate, requireTenantAdmin, async (req, res) => {
   try {
-    const tenantId = tenantIdFromReq(req);
-    if (!tenantId) return res.status(400).json({ error: 'tenantId e obrigatorio.' });
+    const tenantId = tenantIdAutenticado(req);
     const clientes = await lerClientesTenant(tenantId);
     const idx = clientes.findIndex((c) => c.id === req.params.id);
     if (idx === -1) return res.status(404).json({ error: 'Cliente nao encontrado.' });
@@ -1108,12 +1131,9 @@ app.patch('/api/clientes/:id', async (req, res) => {
 });
 
 // ----- EQUIPAMENTOS -------------------------------------------------------
-app.get('/api/equipamentos', async (req, res) => {
+app.get('/api/equipamentos', authenticate, requireTenantMember, async (req, res) => {
   try {
-    const tenantId = tenantIdFromReq(req);
-    if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId e obrigatorio.' });
-    }
+    const tenantId = tenantIdAutenticado(req);
     const equipamentos = await lerTenantJson(tenantId, 'equipamentos.json');
     res.json(equipamentos);
   } catch (err) {
@@ -1145,13 +1165,10 @@ app.get('/api/equipamentos/:id', async (req, res) => {
   }
 });
 
-app.post('/api/equipamentos', async (req, res) => {
+app.post('/api/equipamentos', authenticate, requireTenantAdmin, async (req, res) => {
   try {
     const body = req.body || {};
-    const tenantId = body.tenantId || tenantIdFromReq(req);
-    if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId e obrigatorio.' });
-    }
+    const tenantId = tenantIdAutenticado(req);
     const obrigatorios = [
       'nomeModelo',
       'tipoEquipamento',
@@ -1193,12 +1210,15 @@ app.post('/api/equipamentos', async (req, res) => {
   }
 });
 
-app.patch('/api/equipamentos/:id', async (req, res) => {
+app.patch('/api/equipamentos/:id', authenticate, requireTenantAdmin, async (req, res) => {
   try {
-    const local = await localizarEquipamento(req.params.id, tenantIdFromReq(req));
-    if (!local) return res.status(404).json({ error: 'Equipamento nao encontrado.' });
+    const tenantId = tenantIdAutenticado(req);
+    const local = await localizarEquipamento(req.params.id, tenantId);
+    if (!local || local.tenantId !== tenantId) {
+      return res.status(404).json({ error: 'Equipamento nao encontrado.' });
+    }
 
-    const { tenantId, equipamentos, idx } = local;
+    const { equipamentos, idx } = local;
     const merged = { ...equipamentos[idx], ...req.body };
     const usaSpec = await tenantUsaEspecificacoesAr(tenantId);
     const errSpec = await validarEspecificacoesAr(merged, tenantId, usaSpec);
@@ -1230,12 +1250,15 @@ app.patch('/api/equipamentos/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/equipamentos/:id', async (req, res) => {
+app.delete('/api/equipamentos/:id', authenticate, requireTenantAdmin, async (req, res) => {
   try {
-    const local = await localizarEquipamento(req.params.id, tenantIdFromReq(req));
-    if (!local) return res.status(404).json({ error: 'Equipamento nao encontrado.' });
+    const tenantId = tenantIdAutenticado(req);
+    const local = await localizarEquipamento(req.params.id, tenantId);
+    if (!local || local.tenantId !== tenantId) {
+      return res.status(404).json({ error: 'Equipamento nao encontrado.' });
+    }
 
-    const { tenantId, equipamentos, idx } = local;
+    const { equipamentos, idx } = local;
     equipamentos.splice(idx, 1);
     await escreverTenantJson(tenantId, 'equipamentos.json', equipamentos);
 
@@ -1254,12 +1277,6 @@ app.delete('/api/equipamentos/:id', async (req, res) => {
 app.get('/api/visitas', async (req, res) => {
   try {
     const { equipamentoId } = req.query;
-    const tenantId = tenantIdFromReq(req);
-
-    if (tenantId) {
-      const lista = await listarVisitasTenant(tenantId, equipamentoId);
-      return res.json(lista);
-    }
 
     if (equipamentoId) {
       const local = await localizarEquipamento(String(equipamentoId));
@@ -1268,14 +1285,27 @@ app.get('/api/visitas', async (req, res) => {
       return res.json(lista);
     }
 
-    return res.status(400).json({ error: 'Informe tenantId ou equipamentoId.' });
+    const raw = extrairToken(req);
+    if (!raw) return res.status(401).json({ error: 'Nao autenticado.' });
+    let payload;
+    try {
+      payload = verifyToken(raw);
+    } catch (_) {
+      return res.status(401).json({ error: 'Sessao expirada ou invalida.' });
+    }
+    if (payload.tenantId) {
+      const lista = await listarVisitasTenant(payload.tenantId);
+      return res.json(lista);
+    }
+
+    return res.status(401).json({ error: 'Nao autenticado.' });
   } catch (err) {
     console.error('[GET /api/visitas]', err);
     res.status(500).json({ error: 'Erro ao ler visitas.' });
   }
 });
 
-app.post('/api/visitas', async (req, res) => {
+app.post('/api/visitas', authenticate, requireTenantMember, async (req, res) => {
   try {
     const body = req.body || {};
     const obrigatorios = ['equipamentoId', 'tecnicoUid', 'tecnicoNome', 'tipoServico'];
@@ -1283,8 +1313,11 @@ app.post('/api/visitas', async (req, res) => {
       if (!body[c]) return res.status(400).json({ error: `Campo obrigatorio ausente: ${c}` });
     }
 
-    const local = await localizarEquipamento(body.equipamentoId, tenantIdFromReq(req));
-    if (!local) return res.status(404).json({ error: 'Equipamento nao encontrado.' });
+    const authTenantId = tenantIdAutenticado(req);
+    const local = await localizarEquipamento(body.equipamentoId, authTenantId);
+    if (!local || local.tenantId !== authTenantId) {
+      return res.status(404).json({ error: 'Equipamento nao encontrado.' });
+    }
 
     const { tenantId, equipamentos, idx: eqIdx } = local;
     const visitas = await lerTenantJson(tenantId, 'visitas.json');
@@ -1315,8 +1348,7 @@ app.post('/api/visitas', async (req, res) => {
 });
 
 // ----- PLATAFORMA (admin supremo) -----------------------------------------
-app.get('/api/plataforma/tenants', async (req, res) => {
-  if (!requireSuperAdmin(req, res)) return;
+app.get('/api/plataforma/tenants', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     res.json(await lerTodosTenantsComStats());
   } catch (err) {
@@ -1325,8 +1357,7 @@ app.get('/api/plataforma/tenants', async (req, res) => {
   }
 });
 
-app.post('/api/plataforma/tenants', async (req, res) => {
-  if (!requireSuperAdmin(req, res)) return;
+app.post('/api/plataforma/tenants', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const body = req.body || {};
     const {
@@ -1363,8 +1394,7 @@ app.post('/api/plataforma/tenants', async (req, res) => {
   }
 });
 
-app.patch('/api/plataforma/tenants/:id', async (req, res) => {
-  if (!requireSuperAdmin(req, res)) return;
+app.patch('/api/plataforma/tenants/:id', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const tenants = await lerJson('tenants.json');
     const idx = tenants.findIndex((t) => t.id === req.params.id);
@@ -1385,8 +1415,7 @@ app.patch('/api/plataforma/tenants/:id', async (req, res) => {
   }
 });
 
-app.get('/api/plataforma/tenants/:tenantId/usuarios', async (req, res) => {
-  if (!requireSuperAdmin(req, res)) return;
+app.get('/api/plataforma/tenants/:tenantId/usuarios', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { tenantId } = req.params;
     const tenants = await lerJson('tenants.json');
@@ -1401,8 +1430,7 @@ app.get('/api/plataforma/tenants/:tenantId/usuarios', async (req, res) => {
   }
 });
 
-app.post('/api/plataforma/tenants/:tenantId/usuarios', async (req, res) => {
-  if (!requireSuperAdmin(req, res)) return;
+app.post('/api/plataforma/tenants/:tenantId/usuarios', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { tenantId } = req.params;
     const { nome, email, senha, role } = req.body || {};
@@ -1437,8 +1465,7 @@ app.post('/api/plataforma/tenants/:tenantId/usuarios', async (req, res) => {
   }
 });
 
-app.patch('/api/plataforma/tenants/:tenantId/usuarios/:uid', async (req, res) => {
-  if (!requireSuperAdmin(req, res)) return;
+app.patch('/api/plataforma/tenants/:tenantId/usuarios/:uid', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { tenantId, uid } = req.params;
     const usuarios = await lerJson(path.join(tenantId, 'usuarios.json'));
@@ -1464,8 +1491,7 @@ app.patch('/api/plataforma/tenants/:tenantId/usuarios/:uid', async (req, res) =>
   }
 });
 
-app.delete('/api/plataforma/tenants/:tenantId/usuarios/:uid', async (req, res) => {
-  if (!requireSuperAdmin(req, res)) return;
+app.delete('/api/plataforma/tenants/:tenantId/usuarios/:uid', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { tenantId, uid } = req.params;
     const usuarios = await lerJson(path.join(tenantId, 'usuarios.json'));
@@ -1480,8 +1506,7 @@ app.delete('/api/plataforma/tenants/:tenantId/usuarios/:uid', async (req, res) =
   }
 });
 
-app.get('/api/plataforma/equipamentos', async (req, res) => {
-  if (!requireSuperAdmin(req, res)) return;
+app.get('/api/plataforma/equipamentos', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     res.json(await listarEquipamentosPlataforma());
   } catch (err) {
@@ -1490,8 +1515,7 @@ app.get('/api/plataforma/equipamentos', async (req, res) => {
   }
 });
 
-app.get('/api/plataforma/visitas', async (req, res) => {
-  if (!requireSuperAdmin(req, res)) return;
+app.get('/api/plataforma/visitas', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     res.json(await listarVisitasPlataforma());
   } catch (err) {
@@ -1501,8 +1525,7 @@ app.get('/api/plataforma/visitas', async (req, res) => {
 });
 
 /** Substitui todas as visitas de um tenant (importacao / correcao em lote). */
-app.put('/api/plataforma/tenants/:tenantId/visitas', async (req, res) => {
-  if (!requireSuperAdmin(req, res)) return;
+app.put('/api/plataforma/tenants/:tenantId/visitas', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { tenantId } = req.params;
     const visitas = req.body;
@@ -1526,8 +1549,7 @@ app.put('/api/plataforma/tenants/:tenantId/visitas', async (req, res) => {
   }
 });
 
-app.get('/api/plataforma/cadastros-pendentes', async (req, res) => {
-  if (!requireSuperAdmin(req, res)) return;
+app.get('/api/plataforma/cadastros-pendentes', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const pendentes = await lerJson('plataforma/cadastros-pendentes.json');
     res.json(pendentes);
@@ -1537,8 +1559,7 @@ app.get('/api/plataforma/cadastros-pendentes', async (req, res) => {
   }
 });
 
-app.patch('/api/plataforma/cadastros-pendentes/:uid', async (req, res) => {
-  if (!requireSuperAdmin(req, res)) return;
+app.patch('/api/plataforma/cadastros-pendentes/:uid', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const { uid } = req.params;
     const { acao, tenantId, role } = req.body || {};
@@ -1594,8 +1615,13 @@ app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Endpoint nao encontrado.' });
 });
 
-// Arquivos estaticos — local e fallback no serverless da Vercel
+// Paginas internas — exigem cookie JWT (nao servidas estaticamente sem auth)
 const ROOT = __dirname;
+app.get('/pages/admin.html', requirePageRoles(['super_admin']), servirPaginaInterna('admin.html'));
+app.get('/pages/admin-tenant.html', requirePageRoles(['admin']), servirPaginaInterna('admin-tenant.html'));
+app.get('/pages/campo.html', requirePageRoles(['admin', 'tecnico']), servirPaginaInterna('campo.html'));
+
+// Arquivos estaticos — local e fallback no serverless da Vercel
 app.get('/', (_req, res) => {
   res.sendFile(path.join(ROOT, 'index.html'));
 });

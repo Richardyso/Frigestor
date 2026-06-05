@@ -69,41 +69,70 @@
   window.BASE_URL = sanitizeBaseUrl(window.location.origin);
 
   const STORAGE_KEY = 'frigestor.sessao';
+  const TOKEN_KEY = 'frigestor.token';
+
+  function getToken() {
+    try { return sessionStorage.getItem(TOKEN_KEY); } catch (_) { return null; }
+  }
+  function setToken(token) {
+    try {
+      if (token) sessionStorage.setItem(TOKEN_KEY, token);
+      else sessionStorage.removeItem(TOKEN_KEY);
+    } catch (_) { /* privado */ }
+  }
 
   function getSessao() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = sessionStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch (_) { return null; }
   }
   function setSessao(usuario) {
-    if (usuario) localStorage.setItem(STORAGE_KEY, JSON.stringify(usuario));
-    else {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem('benantec.sessao');
+    if (usuario) {
+      const { token, ...perfil } = usuario;
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(perfil));
+      if (token) setToken(token);
+    } else {
+      sessionStorage.removeItem(STORAGE_KEY);
+      setToken(null);
     }
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('benantec.sessao');
   }
+
+  /** Sessoes antigas (localStorage sem JWT) — descarta. */
+  (function migrarSessaoLegada() {
+    try {
+      if (!getToken() && localStorage.getItem(STORAGE_KEY)) {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem('benantec.sessao');
+      }
+    } catch (_) { /* ok */ }
+  })();
 
   // ------------------------------------------------------------------------
   // Helper de fetch JSON (envia tenant da sessao quando existir)
   // ------------------------------------------------------------------------
   async function jsonFetch(url, options = {}) {
     const opts = { ...options };
+    const skipAuth = !!opts.skipAuth;
     const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
-    if (!opts.skipTenant) {
-      const u = getSessao();
-      if (u && u.role === 'super_admin') {
-        headers['X-Session-Role'] = u.role;
-        headers['X-Session-Uid'] = u.uid;
-      } else if (u && u.tenantId) {
-        headers['X-Tenant-Id'] = u.tenantId;
-      }
+    if (!skipAuth) {
+      const token = getToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
     }
-    delete opts.skipTenant;
-    const res = await fetch(resolveApiUrl(url), { ...opts, headers });
+    delete opts.skipAuth;
+    const res = await fetch(resolveApiUrl(url), {
+      ...opts,
+      headers,
+      credentials: opts.credentials || 'same-origin'
+    });
     let data = null;
     try { data = await res.json(); } catch (_) { /* corpo vazio */ }
     if (!res.ok) {
+      if (res.status === 401 && !skipAuth) {
+        setSessao(null);
+      }
       const err = new Error((data && data.error) || `Erro HTTP ${res.status}`);
       err.status = res.status;
       err.data = data;
@@ -120,7 +149,7 @@
     if (initPromise) return initPromise;
     initPromise = (async () => {
       try {
-        const env = await jsonFetch('/env');
+        const env = await jsonFetch('/env', { skipAuth: true });
         window.ENV = env || {};
         if (env && env.baseUrl) window.BASE_URL = sanitizeBaseUrl(env.baseUrl);
       } catch (err) {
@@ -144,7 +173,7 @@
         return null;
       }
       try {
-        this.atual = await jsonFetch(`/api/tenants/${encodeURIComponent(tenantId)}`, { skipTenant: true });
+        this.atual = await jsonFetch(`/api/tenants/${encodeURIComponent(tenantId)}`, { skipAuth: true });
         return this.atual;
       } catch (err) {
         console.warn('[TENANT] Falha ao carregar tenant:', err.message);
@@ -159,7 +188,7 @@
   };
 
   // ========================================================================
-  // window.AUTH - sessao do usuario logado (persistida em localStorage)
+  // window.AUTH - sessao JWT (token em sessionStorage; perfil sem dados sensiveis)
   // ========================================================================
   window.AUTH = {
     /** Retorna o usuario logado ({uid, tenantId, nome, email, role, ativo}) ou null. */
@@ -170,7 +199,7 @@
       const usuario = await jsonFetch('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, senha }),
-        skipTenant: true
+        skipAuth: true
       });
       setSessao(usuario);
       if (usuario.tenantId) await window.TENANT.carregar(usuario.tenantId);
@@ -178,8 +207,11 @@
       return usuario;
     },
 
-    /** Encerra a sessao local. */
-    logout() {
+    /** Encerra a sessao (cookie httpOnly + token local). */
+    async logout() {
+      try {
+        await jsonFetch('/api/auth/logout', { method: 'POST', skipAuth: true });
+      } catch (_) { /* cookie pode ja ter expirado */ }
       setSessao(null);
       window.TENANT.atual = null;
     },
@@ -189,7 +221,7 @@
       return jsonFetch('/api/auth/cadastro', {
         method: 'POST',
         body: JSON.stringify({ nome, email, senha }),
-        skipTenant: true
+        skipAuth: true
       });
     },
 
@@ -204,7 +236,7 @@
       return jsonFetch('/api/auth/google/cadastro', {
         method: 'POST',
         body: JSON.stringify({ idToken }),
-        skipTenant: true
+        skipAuth: true
       });
     },
 
@@ -213,7 +245,7 @@
       return jsonFetch('/api/auth/esqueci-senha', {
         method: 'POST',
         body: JSON.stringify({ email }),
-        skipTenant: true
+        skipAuth: true
       });
     },
 
@@ -222,7 +254,7 @@
       return jsonFetch('/api/auth/verificar-codigo', {
         method: 'POST',
         body: JSON.stringify({ email, codigo }),
-        skipTenant: true
+        skipAuth: true
       });
     },
 
@@ -231,7 +263,7 @@
       return jsonFetch('/api/auth/redefinir-senha', {
         method: 'POST',
         body: JSON.stringify({ email, resetToken, senha, senhaConfirmacao }),
-        skipTenant: true
+        skipAuth: true
       });
     },
 
@@ -246,7 +278,7 @@
       const usuario = await jsonFetch('/api/auth/google', {
         method: 'POST',
         body: JSON.stringify({ idToken }),
-        skipTenant: true
+        skipAuth: true
       });
       setSessao(usuario);
       if (usuario.tenantId) await window.TENANT.carregar(usuario.tenantId);
@@ -289,7 +321,7 @@
       const u = getSessao();
       const lista = Array.isArray(rolesPermitidas) ? rolesPermitidas : [rolesPermitidas];
       const tenantOk = !exigeTenant || u?.tenantId;
-      if (!u || !tenantOk || !lista.includes(u.role)) {
+      if (!u || !getToken() || !tenantOk || !lista.includes(u.role)) {
         window.location.replace(loginUrl);
         return null;
       }
@@ -301,8 +333,8 @@
    * Logout global — usado pelos botoes "Sair" em campo.html, admin.html, etc.
    * Precisa estar em firebase-config.js (carregado em todas as paginas internas).
    */
-  window.fazerLogout = function fazerLogout() {
-    window.AUTH.logout();
+  window.fazerLogout = async function fazerLogout() {
+    await window.AUTH.logout();
     window.location.replace('/pages/login.html');
   };
 
@@ -320,8 +352,8 @@
   window.DB = {
     // --- tenants ----------------------------------------------------------
     tenants: {
-      listar() { return jsonFetch('/api/tenants', { skipTenant: true }); },
-      buscar(id) { return jsonFetch(`/api/tenants/${encodeURIComponent(id)}`, { skipTenant: true }); }
+      listar() { return jsonFetch('/api/tenants', { skipAuth: true }); },
+      buscar(id) { return jsonFetch(`/api/tenants/${encodeURIComponent(id)}`, { skipAuth: true }); }
     },
 
     // --- plataforma (admin supremo) ---------------------------------------
@@ -405,7 +437,7 @@
     // --- equipamentos -----------------------------------------------------
     equipamentos: {
       listar() { return jsonFetch('/api/equipamentos'); },
-      buscar(id) { return jsonFetch(`/api/equipamentos/${encodeURIComponent(id)}`); },
+      buscar(id) { return jsonFetch(`/api/equipamentos/${encodeURIComponent(id)}`, { skipAuth: true }); },
       criar(payload) {
         return jsonFetch('/api/equipamentos', { method: 'POST', body: JSON.stringify(payload) });
       },
@@ -425,7 +457,8 @@
         const qs = equipamentoId
           ? `?equipamentoId=${encodeURIComponent(equipamentoId)}`
           : '';
-        return jsonFetch(`/api/visitas${qs}`);
+        const opts = equipamentoId ? { skipAuth: true } : {};
+        return jsonFetch(`/api/visitas${qs}`, opts);
       },
       criar(payload) {
         return jsonFetch('/api/visitas', { method: 'POST', body: JSON.stringify(payload) });
