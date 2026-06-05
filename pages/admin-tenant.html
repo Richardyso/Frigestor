@@ -128,8 +128,6 @@
               <tr>
                 <th>Nome</th>
                 <th class="th-actions">Acoes</th>
-                <th>Status</th>
-                <th>Endereco</th>
               </tr>
             </thead>
             <tbody id="tbl-clientes"></tbody>
@@ -363,22 +361,19 @@
           </fieldset>
           <div class="form-group">
             <label class="form-label">Contatos <span class="form-label__hint">(telefone / WhatsApp, opcional)</span></label>
-            <div id="cliente-contatos-list" class="areas-list"></div>
-            <button type="button" class="btn btn--ghost btn--sm" id="btn-add-contato">+ Adicionar contato</button>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Responsaveis <span class="form-label__hint">(opcional)</span></label>
-            <div id="cliente-responsaveis-list" class="areas-list"></div>
-            <button type="button" class="btn btn--ghost btn--sm" id="btn-add-responsavel">+ Adicionar responsavel</button>
-            <span class="form-label__hint">Ex.: Recepcao, Joao — Gerente</span>
+            <div id="cliente-contatos-list" class="contatos-list"></div>
+            <button type="button" class="btn btn--ghost btn--sm" id="btn-add-contato">+ Adicionar numero</button>
           </div>
           <div class="form-group">
             <label class="form-label" for="cliente-obs">Observacoes <span class="form-label__hint">(opcional)</span></label>
             <textarea class="form-control" id="cliente-obs" rows="3" placeholder="Informacoes uteis para a equipe em campo"></textarea>
           </div>
-          <div class="form-actions">
-            <button type="button" class="btn btn--ghost" data-close="modal-cliente">Cancelar</button>
-            <button type="submit" class="btn btn--accent" id="btn-salvar-cliente">Salvar</button>
+          <div class="form-actions form-actions--split" id="cliente-form-actions">
+            <button type="button" class="btn btn--ghost btn--sm btn-toggle-cliente" id="btn-toggle-cliente" hidden>Desativar cliente</button>
+            <div class="form-actions__right">
+              <button type="button" class="btn btn--ghost" data-close="modal-cliente">Cancelar</button>
+              <button type="submit" class="btn btn--accent" id="btn-salvar-cliente">Salvar</button>
+            </div>
           </div>
         </form>
       </div>

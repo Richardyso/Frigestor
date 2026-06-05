@@ -472,47 +472,96 @@
   // Clientes (empresas atendidas)
   // -----------------------------------------------------------------------
   let clienteEditandoId = null;
+  let clienteEditandoAtivo = true;
   const CF = () => window.CLIENTE_FORM;
+
+  function atualizarBotaoToggleCliente() {
+    const btn = document.getElementById('btn-toggle-cliente');
+    if (!btn) return;
+    if (!clienteEditandoId) {
+      btn.hidden = true;
+      return;
+    }
+    btn.hidden = false;
+    btn.textContent = clienteEditandoAtivo ? 'Desativar cliente' : 'Ativar cliente';
+    btn.classList.toggle('btn--accent', !clienteEditandoAtivo);
+    btn.classList.toggle('btn--ghost', clienteEditandoAtivo);
+  }
 
   function limparFormCliente() {
     clienteEditandoId = null;
+    clienteEditandoAtivo = true;
     ultimoCepBuscado = '';
     document.getElementById('modal-cliente-titulo').textContent = 'Cadastrar cliente';
     document.getElementById('form-cliente')?.reset();
     document.getElementById('err-cliente-documento').textContent = '';
-    ['cliente-contatos-list', 'cliente-responsaveis-list'].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = '';
-    });
+    const lista = document.getElementById('cliente-contatos-list');
+    if (lista) lista.innerHTML = '';
+    atualizarBotaoToggleCliente();
   }
 
-  function adicionarCampoLista(containerId, inputClass, valor, placeholder) {
-    const lista = document.getElementById(containerId);
+  function adicionarContatoRow(telefone = '', rotulo = '') {
+    const lista = document.getElementById('cliente-contatos-list');
     if (!lista) return;
     const row = document.createElement('div');
-    row.className = 'areas-list__row';
+    row.className = 'contato-row';
     row.innerHTML = `
-      <input type="text" class="form-control ${inputClass}" placeholder="${UI.escapeHtml(placeholder)}" value="${UI.escapeHtml(valor)}" />
-      <button type="button" class="btn btn--ghost btn--sm" data-a="rem-item" title="Remover">&times;</button>
+      <input type="tel" class="form-control cliente-contato-tel" inputmode="tel" placeholder="(83) 99999-9999" value="${UI.escapeHtml(telefone)}" />
+      <input type="text" class="form-control cliente-contato-rotulo" placeholder="Recepcao, Gerencia..." value="${UI.escapeHtml(rotulo)}" />
+      <button type="button" class="btn btn--ghost btn--sm contato-row__rem" data-a="rem-item" title="Remover">&times;</button>
     `;
-    const inp = row.querySelector('input');
-    if (inputClass === 'cliente-contato-input') {
-      inp.addEventListener('input', () => {
-        inp.value = CF()?.formatarTelefoneInput(inp.value) || inp.value;
-      });
-    }
-    row.querySelector('[data-a="rem-item"]').addEventListener('click', () => row.remove());
+    const tel = row.querySelector('.cliente-contato-tel');
+    tel.addEventListener('input', () => {
+      tel.value = CF()?.formatarTelefoneInput(tel.value) || tel.value;
+    });
+    row.querySelector('[data-a="rem-item"]').addEventListener('click', () => {
+      if (lista.querySelectorAll('.contato-row').length <= 1) {
+        tel.value = '';
+        row.querySelector('.cliente-contato-rotulo').value = '';
+        return;
+      }
+      row.remove();
+    });
     lista.appendChild(row);
   }
 
-  function lerListaDoFormulario(selector) {
-    return Array.from(document.querySelectorAll(selector))
-      .map((inp) => inp.value.trim())
-      .filter(Boolean);
+  function parseContatosCliente(c) {
+    const raw = Array.isArray(c.contatos) ? c.contatos : [];
+    const resp = Array.isArray(c.responsaveis) ? c.responsaveis : [];
+    const items = raw.map((item, i) => {
+      if (typeof item === 'object' && item !== null) {
+        return {
+          telefone: String(item.telefone || '').trim(),
+          rotulo: String(item.rotulo || '').trim()
+        };
+      }
+      const s = String(item || '').trim();
+      if (!s) return { telefone: '', rotulo: '' };
+      const sep = s.match(/^(.+?)\s*[—\-|]\s*(.+)$/);
+      if (sep) return { telefone: sep[1].trim(), rotulo: sep[2].trim() };
+      return { telefone: s, rotulo: resp[i] || '' };
+    });
+    if (!items.length && resp.length) {
+      return resp.map((rotulo) => ({ telefone: '', rotulo: String(rotulo).trim() }));
+    }
+    if (items.length && resp.length && items.every((x) => !x.rotulo)) {
+      return items.map((item, i) => ({ ...item, rotulo: resp[i] || '' }));
+    }
+    return items.length ? items : [{ telefone: '', rotulo: '' }];
+  }
+
+  function lerContatosDoFormulario() {
+    return Array.from(document.querySelectorAll('#cliente-contatos-list .contato-row'))
+      .map((row) => ({
+        telefone: row.querySelector('.cliente-contato-tel')?.value.trim() || '',
+        rotulo: row.querySelector('.cliente-contato-rotulo')?.value.trim() || ''
+      }))
+      .filter((item) => item.telefone || item.rotulo);
   }
 
   function preencherFormCliente(c) {
     clienteEditandoId = c.id;
+    clienteEditandoAtivo = c.ativo !== false;
     ultimoCepBuscado = '';
     document.getElementById('modal-cliente-titulo').textContent = 'Editar cliente';
     document.getElementById('cliente-nome').value = c.nome || '';
@@ -526,23 +575,9 @@
     document.getElementById('err-cliente-documento').textContent = '';
 
     const contatos = document.getElementById('cliente-contatos-list');
-    const responsaveis = document.getElementById('cliente-responsaveis-list');
     if (contatos) contatos.innerHTML = '';
-    if (responsaveis) responsaveis.innerHTML = '';
-
-    const listaContatos = Array.isArray(c.contatos) ? c.contatos : [];
-    if (listaContatos.length) {
-      listaContatos.forEach((v) => adicionarCampoLista('cliente-contatos-list', 'cliente-contato-input', v, '(11) 99999-9999'));
-    } else {
-      adicionarCampoLista('cliente-contatos-list', 'cliente-contato-input', '', '(11) 99999-9999');
-    }
-
-    const listaResp = Array.isArray(c.responsaveis) ? c.responsaveis : [];
-    if (listaResp.length) {
-      listaResp.forEach((v) => adicionarCampoLista('cliente-responsaveis-list', 'cliente-responsavel-input', v, 'Ex: Recepcao ou Joao — Gerente'));
-    } else {
-      adicionarCampoLista('cliente-responsaveis-list', 'cliente-responsavel-input', '', 'Ex: Recepcao ou Joao — Gerente');
-    }
+    parseContatosCliente(c).forEach((item) => adicionarContatoRow(item.telefone, item.rotulo));
+    atualizarBotaoToggleCliente();
 
     const cepInp = document.getElementById('cliente-cep');
     if (cepInp && CF()?.apenasDigitos(cepInp.value).length === 8) {
@@ -613,37 +648,30 @@
     const tbody = document.getElementById('tbl-clientes');
     if (!tbody) return;
     if (!clientes.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum cliente cadastrado.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">Nenhum cliente cadastrado.</td></tr>';
       return;
     }
     tbody.innerHTML = clientes
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
       .map((c) => {
         const doc = c.documento || c.cnpj;
+        const inativo = c.ativo === false;
         return `
-        <tr data-id="${UI.escapeHtml(c.id)}" class="tr-cliente">
+        <tr data-id="${UI.escapeHtml(c.id)}" class="tr-cliente${inativo ? ' tr-cliente--inativo' : ''}">
           <td data-label="Nome" class="td-cliente-nome" data-a="abrir-equip">
             <strong>${UI.escapeHtml(c.nome)}</strong>
             ${doc ? `<br/><span class="text-dim cell-sub">${UI.escapeHtml(doc)}</span>` : ''}
+            ${inativo ? '<br/><span class="badge badge--muted">Inativo</span>' : ''}
           </td>
           <td data-label="Acoes" class="cell-actions td-actions">
             <button type="button" class="btn btn--ghost btn--sm" data-a="edit">Editar</button>
-            <button type="button" class="btn btn--ghost btn--sm" data-a="toggle">${c.ativo !== false ? 'Desativar' : 'Ativar'}</button>
           </td>
-          <td data-label="Status">
-            <span class="badge ${c.ativo !== false ? 'badge--success' : 'badge--muted'}">${c.ativo !== false ? 'Ativo' : 'Inativo'}</span>
-          </td>
-          <td data-label="Endereco">${UI.escapeHtml(c.endereco || '—')}</td>
         </tr>`;
       }).join('');
 
     tbody.querySelectorAll('tr').forEach((tr) => {
       const id = tr.dataset.id;
       const c = clientes.find((x) => x.id === id);
-      tr.querySelector('[data-a="toggle"]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        toggleCliente(id);
-      });
       tr.querySelector('[data-a="edit"]')?.addEventListener('click', (ev) => {
         ev.stopPropagation();
         if (!c) return;
@@ -657,31 +685,31 @@
     });
   }
 
-  async function toggleCliente(id) {
-    const c = clientes.find((x) => x.id === id);
-    if (!c) return;
-    try {
-      await window.DB.clientes.atualizar(id, { ativo: c.ativo === false });
-      window.UI.toast(`Cliente ${c.ativo === false ? 'ativado' : 'desativado'}.`, 'success');
-      await carregarTudo();
-    } catch (err) {
-      window.UI.toast(err.message, 'danger');
-    }
-  }
-
   document.getElementById('btn-novo-cliente')?.addEventListener('click', () => {
     limparFormCliente();
-    adicionarCampoLista('cliente-contatos-list', 'cliente-contato-input', '', '(11) 99999-9999');
-    adicionarCampoLista('cliente-responsaveis-list', 'cliente-responsavel-input', '', 'Ex: Recepcao ou Joao — Gerente');
+    adicionarContatoRow();
     abrirModal('modal-cliente');
   });
 
   document.getElementById('btn-add-contato')?.addEventListener('click', () => {
-    adicionarCampoLista('cliente-contatos-list', 'cliente-contato-input', '', '(11) 99999-9999');
+    adicionarContatoRow();
   });
 
-  document.getElementById('btn-add-responsavel')?.addEventListener('click', () => {
-    adicionarCampoLista('cliente-responsaveis-list', 'cliente-responsavel-input', '', 'Ex: Recepcao ou Joao — Gerente');
+  document.getElementById('btn-toggle-cliente')?.addEventListener('click', async () => {
+    if (!clienteEditandoId) return;
+    const c = clientes.find((x) => x.id === clienteEditandoId);
+    if (!c) return;
+    const acao = clienteEditandoAtivo ? 'desativar' : 'ativar';
+    if (!confirm(`Confirma ${acao} o cliente "${c.nome}"?`)) return;
+    try {
+      await window.DB.clientes.atualizar(clienteEditandoId, { ativo: !clienteEditandoAtivo });
+      window.UI.toast(`Cliente ${clienteEditandoAtivo ? 'desativado' : 'ativado'}.`, 'success');
+      fecharModal('modal-cliente');
+      limparFormCliente();
+      await carregarTudo();
+    } catch (err) {
+      window.UI.toast(err.message, 'danger');
+    }
   });
 
   document.getElementById('cliente-documento')?.addEventListener('input', (ev) => {
@@ -760,8 +788,7 @@
       bairro: document.getElementById('cliente-bairro').value.trim(),
       cidade: document.getElementById('cliente-cidade').value.trim(),
       cep: document.getElementById('cliente-cep').value.trim(),
-      contatos: lerListaDoFormulario('.cliente-contato-input'),
-      responsaveis: lerListaDoFormulario('.cliente-responsavel-input'),
+      contatos: lerContatosDoFormulario(),
       observacoes: document.getElementById('cliente-obs').value.trim()
     };
     const btn = document.getElementById('btn-salvar-cliente');
