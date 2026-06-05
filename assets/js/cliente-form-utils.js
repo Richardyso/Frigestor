@@ -58,38 +58,78 @@
     return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
   }
 
+  function normalizarRespostaCep(dados) {
+    if (!dados) return null;
+    const logradouro = String(dados.logradouro || '').trim();
+    const bairro = String(dados.bairro || '').trim();
+    const cidade = String(dados.cidade || '').trim();
+    const uf = String(dados.uf || '').trim().toUpperCase();
+    if (!logradouro && !bairro && !cidade) return null;
+    return {
+      logradouro,
+      bairro,
+      cidade,
+      uf,
+      cep: dados.cep ? formatarCepInput(dados.cep) : ''
+    };
+  }
+
+  async function fetchJson(url) {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) return null;
+    return r.json();
+  }
+
+  /** BrasilAPI v2 (OpenCEP) — base mais atual que ViaCEP em CEPs novos. */
+  async function buscarBrasilApiV2(d) {
+    const j = await fetchJson(`https://brasilapi.com.br/api/cep/v2/${d}`);
+    if (!j || j.errors || j.type === 'service_error') return null;
+    return normalizarRespostaCep({
+      logradouro: j.street,
+      bairro: j.neighborhood,
+      cidade: j.city,
+      uf: j.state,
+      cep: j.cep || d
+    });
+  }
+
+  /** OpenCEP direto (mesma fonte usada pela BrasilAPI v2). */
+  async function buscarOpenCep(d) {
+    const j = await fetchJson(`https://opencep.com/v1/${d}`);
+    if (!j || j.erro || j.error) return null;
+    return normalizarRespostaCep({
+      logradouro: j.logradouro,
+      bairro: j.bairro,
+      cidade: j.localidade,
+      uf: j.uf,
+      cep: j.cep || d
+    });
+  }
+
+  /** ViaCEP — fallback; alguns CEPs novos ficam desatualizados (ex.: 58073-171). */
+  async function buscarViaCep(d) {
+    const j = await fetchJson(`https://viacep.com.br/ws/${d}/json/`);
+    if (!j || j.erro) return null;
+    return normalizarRespostaCep({
+      logradouro: j.logradouro,
+      bairro: j.bairro,
+      cidade: j.localidade,
+      uf: j.uf,
+      cep: j.cep || d
+    });
+  }
+
   async function buscarEnderecoPorCep(cep) {
     const d = apenasDigitos(cep);
     if (d.length !== 8) return null;
 
-    try {
-      const r = await fetch(`https://viacep.com.br/ws/${d}/json/`, { cache: 'no-store' });
-      const j = await r.json();
-      if (j && !j.erro) {
-        return {
-          logradouro: j.logradouro || '',
-          bairro: j.bairro || '',
-          cidade: j.localidade || '',
-          uf: j.uf || '',
-          cep: formatarCepInput(d)
-        };
-      }
-    } catch (_) { /* tenta fallback */ }
-
-    try {
-      const r = await fetch(`https://brasilapi.com.br/api/cep/v1/${d}`, { cache: 'no-store' });
-      if (r.ok) {
-        const j = await r.json();
-        return {
-          logradouro: j.street || '',
-          bairro: j.neighborhood || '',
-          cidade: j.city || '',
-          uf: j.state || '',
-          cep: formatarCepInput(d)
-        };
-      }
-    } catch (_) { /* sem CEP */ }
-
+    const fontes = [buscarBrasilApiV2, buscarOpenCep, buscarViaCep];
+    for (const buscar of fontes) {
+      try {
+        const res = await buscar(d);
+        if (res) return { ...res, cep: res.cep || formatarCepInput(d) };
+      } catch (_) { /* proxima fonte */ }
+    }
     return null;
   }
 

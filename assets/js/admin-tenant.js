@@ -476,6 +476,7 @@
 
   function limparFormCliente() {
     clienteEditandoId = null;
+    ultimoCepBuscado = '';
     document.getElementById('modal-cliente-titulo').textContent = 'Cadastrar cliente';
     document.getElementById('form-cliente')?.reset();
     document.getElementById('err-cliente-documento').textContent = '';
@@ -512,6 +513,7 @@
 
   function preencherFormCliente(c) {
     clienteEditandoId = c.id;
+    ultimoCepBuscado = '';
     document.getElementById('modal-cliente-titulo').textContent = 'Editar cliente';
     document.getElementById('cliente-nome').value = c.nome || '';
     document.getElementById('cliente-documento').value = c.documento || c.cnpj || '';
@@ -540,6 +542,11 @@
       listaResp.forEach((v) => adicionarCampoLista('cliente-responsaveis-list', 'cliente-responsavel-input', v, 'Ex: Recepcao ou Joao — Gerente'));
     } else {
       adicionarCampoLista('cliente-responsaveis-list', 'cliente-responsavel-input', '', 'Ex: Recepcao ou Joao — Gerente');
+    }
+
+    const cepInp = document.getElementById('cliente-cep');
+    if (cepInp && CF()?.apenasDigitos(cepInp.value).length === 8) {
+      consultarCepCliente(cepInp);
     }
   }
 
@@ -683,25 +690,52 @@
     document.getElementById('err-cliente-documento').textContent = '';
   });
 
-  document.getElementById('cliente-cep')?.addEventListener('input', (ev) => {
-    const inp = ev.target;
-    inp.value = CF()?.formatarCepInput(inp.value) || inp.value;
-  });
+  let ultimoCepBuscado = '';
 
-  document.getElementById('cliente-cep')?.addEventListener('blur', async (ev) => {
-    const cep = ev.target.value;
-    const dados = await CF()?.buscarEnderecoPorCep(cep);
-    if (!dados) return;
+  function aplicarEnderecoCep(dados, cepInput) {
+    if (!dados) return false;
     const log = document.getElementById('cliente-logradouro');
     const bairro = document.getElementById('cliente-bairro');
     const cidade = document.getElementById('cliente-cidade');
-    if (log && dados.logradouro && !log.value.trim()) log.value = dados.logradouro;
-    if (bairro && dados.bairro && !bairro.value.trim()) bairro.value = dados.bairro;
-    if (cidade && dados.cidade) {
-      const comUf = dados.uf ? `${dados.cidade} — ${dados.uf}` : dados.cidade;
-      if (!cidade.value.trim()) cidade.value = comUf;
+    if (log) log.value = dados.logradouro || '';
+    if (bairro) bairro.value = dados.bairro || '';
+    if (cidade) {
+      cidade.value = dados.uf && dados.cidade
+        ? `${dados.cidade} — ${dados.uf}`
+        : (dados.cidade || '');
     }
-    if (dados.cep) ev.target.value = dados.cep;
+    if (dados.cep && cepInput) cepInput.value = dados.cep;
+    return true;
+  }
+
+  async function consultarCepCliente(cepInput) {
+    const cep = cepInput?.value || '';
+    const d = CF()?.apenasDigitos(cep) || '';
+    if (d.length !== 8 || d === ultimoCepBuscado) return;
+    ultimoCepBuscado = d;
+    cepInput.disabled = true;
+    try {
+      const dados = await CF()?.buscarEnderecoPorCep(cep);
+      if (!aplicarEnderecoCep(dados, cepInput)) {
+        window.UI?.toast('CEP nao encontrado.', 'warning');
+      }
+    } catch (_) {
+      window.UI?.toast('Erro ao buscar CEP. Tente novamente.', 'danger');
+    } finally {
+      cepInput.disabled = false;
+    }
+  }
+
+  document.getElementById('cliente-cep')?.addEventListener('input', (ev) => {
+    const inp = ev.target;
+    inp.value = CF()?.formatarCepInput(inp.value) || inp.value;
+    if (CF()?.apenasDigitos(inp.value).length === 8) {
+      consultarCepCliente(inp);
+    }
+  });
+
+  document.getElementById('cliente-cep')?.addEventListener('blur', (ev) => {
+    consultarCepCliente(ev.target);
   });
 
   document.getElementById('form-cliente')?.addEventListener('submit', async (ev) => {
