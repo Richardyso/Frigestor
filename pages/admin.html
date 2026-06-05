@@ -79,7 +79,7 @@
       <!-- EMPRESAS -->
       <section class="platform-panel is-active" data-panel="empresas">
         <div class="tenants-toolbar">
-          <p class="tenants-toolbar__hint">Cada empresa recebe um ID unico usado nas rotas e pastas de dados (<code>data/{id}/</code>).</p>
+          <p class="tenants-toolbar__hint">Cada empresa recebe um ID unico no Firestore e nas rotas da API (<code>/api/tenants/{id}</code>).</p>
           <button type="button" class="btn btn--accent btn--sm" id="btn-nova-empresa">+ Nova empresa</button>
         </div>
         <div class="tenant-grid" id="tenant-grid"></div>
@@ -219,7 +219,7 @@
       </div>
       <div class="modal__body">
         <form id="form-tenant" novalidate>
-          <p class="modal-intro">Serao criados o cadastro em <strong>tenants.json</strong>, a pasta <strong>data/{id}/</strong> com config, usuarios, equipamentos e visitas, e o primeiro admin da empresa.</p>
+          <p class="modal-intro">Serao criados o tenant no <strong>Firestore</strong> (config, usuarios, equipamentos e visitas) e o primeiro admin da empresa.</p>
 
           <h4 class="form-section-title">Dados da empresa</h4>
           <div class="form-row">

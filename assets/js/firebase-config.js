@@ -1,8 +1,8 @@
 /**
  * firebase-config.js
  * --------------------------------------------------------------------------
- * ETAPA 1 (atual): camada de abstracao que conversa com a API REST local
- *                  servida pelo `server.js` (dados em /data/*.json).
+ * Camada de abstracao que conversa com a API REST servida pelo `server.js`
+ * (persistencia em Cloud Firestore).
  *
  * ETAPA 2 (futura): substituir pela inicializacao real do Firebase
  *                   (firebase-app, firebase-auth, firebase-firestore via CDN)

@@ -36,7 +36,6 @@ const b64 = Buffer.from(JSON.stringify(sa)).toString('base64');
 let env = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf-8') : '';
 
 const linhas = [
-  'DATA_BACKEND=firestore',
   `FIREBASE_PROJECT_ID=${sa.project_id || 'frigestor-acb4a'}`,
   `FIREBASE_SERVICE_ACCOUNT_BASE64=${b64}`
 ];
@@ -48,6 +47,7 @@ for (const linha of linhas) {
   else env += (env.endsWith('\n') ? '' : '\n') + linha + '\n';
 }
 
+env = env.replace(/^DATA_BACKEND=.*\n/m, '');
 env = env.replace(/^FIREBASE_SERVICE_ACCOUNT=.*\n/m, '');
 env = env.replace(/^FIREBASE_SERVICE_ACCOUNT_JSON=.*\n/m, '');
 

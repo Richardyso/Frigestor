@@ -2,23 +2,19 @@
  * Servidor Express minimo — Frigestor (multi-tenant)
  * --------------------------------------------------------------------------
  * - Serve os arquivos estaticos (HTML, CSS, JS, imagens)
- * - Expoe rota /env com as variaveis publicas do Firebase (preparado para
- *   a 2a etapa, quando trocaremos a camada de dados local pelo Firestore)
- * - Camada de dados: JSON local ou Cloud Firestore (lib/data-store.js)
- *     data/tenants.json          — cadastro basico das empresas
- *     data/{tenantId}/*.json     — usuarios, equipamentos, visitas, config
- *     data/plataforma/*.json     — cadastros pendentes (sem tenant)
- *
- * Com DATA_BACKEND=firestore (e conta de servico), leitura/gravacao vao para a nuvem.
+ * - Expoe rota /env com as variaveis publicas do Firebase
+ * - Camada de dados: Cloud Firestore (lib/data-store.js)
+ *     tenants                    — empresas
+ *     tenants/{id}/*             — usuarios, equipamentos, visitas, clientes, config
+ *     plataforma/*               — super admin, pendentes, recuperacao de senha
  */
 
 require('dotenv').config();
 
 const express = require('express');
 const path = require('path');
-const fs = require('fs').promises;
 const crypto = require('crypto');
-const { lerJson, escreverJson, usarFirestore, DATA_DIR } = require('./lib/data-store');
+const { lerJson, escreverJson, tenantDocExiste } = require('./lib/data-store');
 const { verifyGoogleIdToken } = require('./lib/firebase-admin');
 const {
   sendWelcomeEmail,
@@ -566,12 +562,8 @@ function configPadraoTenant(subtitulo) {
 async function tenantIdDisponivel(id) {
   const tenants = await lerJson('tenants.json');
   if (tenants.some((t) => t.id === id)) return false;
-  try {
-    await fs.access(path.join(DATA_DIR, id));
-    return false;
-  } catch (_) {
-    return true;
-  }
+  if (await tenantDocExiste(id)) return false;
+  return true;
 }
 
 async function criarTenantCompleto(payload) {
@@ -659,7 +651,7 @@ app.get('/env', (req, res) => {
 });
 
 // ==========================================================================
-// API LOCAL (etapa 1 - sera substituida por Firestore na etapa 2)
+// API REST (persistencia via Firestore)
 // ==========================================================================
 
 // ----- TENANTS ------------------------------------------------------------
@@ -1508,6 +1500,32 @@ app.get('/api/plataforma/visitas', async (req, res) => {
   }
 });
 
+/** Substitui todas as visitas de um tenant (importacao / correcao em lote). */
+app.put('/api/plataforma/tenants/:tenantId/visitas', async (req, res) => {
+  if (!requireSuperAdmin(req, res)) return;
+  try {
+    const { tenantId } = req.params;
+    const visitas = req.body;
+    if (!Array.isArray(visitas)) {
+      return res.status(400).json({ error: 'Corpo deve ser um array de visitas.' });
+    }
+    const tenants = await lerJson('tenants.json');
+    if (!tenants.some((t) => t.id === tenantId)) {
+      return res.status(404).json({ error: 'Tenant nao encontrado.' });
+    }
+    for (const v of visitas) {
+      if (!v.equipamentoId || !v.tipoServico) {
+        return res.status(400).json({ error: 'Visita invalida: equipamentoId e tipoServico obrigatorios.' });
+      }
+    }
+    await escreverJson(path.join(tenantId, 'visitas.json'), visitas);
+    res.json({ ok: true, tenantId, total: visitas.length });
+  } catch (err) {
+    console.error('[PUT /api/plataforma/tenants/:tenantId/visitas]', err);
+    res.status(500).json({ error: 'Erro ao gravar visitas.' });
+  }
+});
+
 app.get('/api/plataforma/cadastros-pendentes', async (req, res) => {
   if (!requireSuperAdmin(req, res)) return;
   try {
@@ -1592,9 +1610,8 @@ module.exports = app;
 
 if (require.main === module) {
   app.listen(PORT, () => {
-    const backend = usarFirestore() ? 'Cloud Firestore' : 'JSON local (/data)';
     console.log(`\n  Frigestor | Gestao de Equipamentos`);
-    console.log(`  Banco de dados: ${backend}`);
+    console.log(`  Banco de dados: Cloud Firestore`);
     console.log(`  Servidor rodando em: http://localhost:${PORT}\n`);
   });
 }

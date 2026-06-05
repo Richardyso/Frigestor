@@ -49,7 +49,7 @@ Autenticação atual: **e-mail e senha** (sessão via API). Cadastro público e 
 
 | Área | Recursos |
 |------|----------|
-| **Multi-tenant** | Uma instância da plataforma; dados segregados por empresa (`data/{tenantId}/` ou Firestore equivalente). |
+| **Multi-tenant** | Uma instância da plataforma; dados segregados por empresa no **Cloud Firestore**. |
 | **Usuários** | Papéis: `super_admin`, `admin` (empresa), `tecnico`. Admin cria técnicos com acesso já liberado; e-mail de boas-vindas com login (e-mail) e senha definida no cadastro. |
 | **Clientes** | Cadastro com endereço, CNPJ opcional, áreas e observações. |
 | **Equipamentos** | Tipos (ex. ar condicionado), vínculo a cliente e técnico, specs, data de instalação, QR e página pública. |
@@ -65,14 +65,15 @@ Limites por plano (técnicos, equipamentos etc.) são definidos **comercialmente
 
 - **Frontend:** HTML, CSS e JavaScript (sem framework pesado).
 - **Backend:** Node.js + Express (`server.js`, `api/index.js` na Vercel).
-- **Dados:** arquivos JSON por tenant em `data/` (ou camada Firestore conforme ambiente).
+- **Dados:** Cloud Firestore (`lib/data-store.js`), projeto Firebase configurado via variáveis de ambiente.
 
 ```bash
 npm install
+npm run setup:firebase-env   # primeira vez: gera .env com credenciais Firebase
 npm start
 ```
 
-Configure `.env` (SMTP, segredos, flags de auth). Não versione credenciais.
+Configure `.env` (Firebase, SMTP, flags de auth). Não versione credenciais.
 
 ---
 
@@ -105,8 +106,7 @@ Tabela sugerida (Starter / Profissional / Enterprise), estudo de caso do nicho e
 ```
 api/              # Entrada serverless (Vercel)
 assets/           # CSS, JS, imagens
-data/             # Tenants e JSON por empresa (dev)
-lib/              # E-mail, auth, persistência
+lib/              # E-mail, auth, Firestore
 pages/            # Telas (login, admin tenant, campo, equipamento público)
 docs/             # Documentação técnica (ex.: OAuth)
 server.js         # Servidor de desenvolvimento

@@ -165,7 +165,7 @@
     if (inpId) inpId.value = slug;
     if (idPreview) {
       idPreview.textContent = slug
-        ? `Pasta e rotas: data/${slug}/ · /api/tenants/${slug}`
+        ? `Firestore · /api/tenants/${slug}`
         : 'Gerado automaticamente a partir do nome.';
     }
   }
@@ -174,7 +174,7 @@
   inpId?.addEventListener('input', () => {
     idTenantManual = true;
     if (idPreview && inpId.value) {
-      idPreview.textContent = `Pasta e rotas: data/${inpId.value}/ · /api/tenants/${inpId.value}`;
+      idPreview.textContent = `Firestore · /api/tenants/${inpId.value}`;
     }
   });
 

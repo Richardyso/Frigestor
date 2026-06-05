@@ -10,3 +10,4 @@ npm-debug.log*
 
 # Modelos de contrato e proposta comercial (uso local; nao versionar)
 docs/contratos/
+.vercel
