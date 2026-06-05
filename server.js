@@ -34,6 +34,12 @@ const {
 } = require('./lib/password-reset');
 const { resolveSiteUrl } = require('./lib/site-url');
 const { googleOAuthHabilitado, cadastroPublicoHabilitado } = require('./lib/auth-flags');
+const {
+  normalizarClientePayload: normalizarClienteDados,
+  validarDocumento,
+  validarEnderecoPartes,
+  normalizarDocumento
+} = require('./lib/cliente-utils');
 const { verifyToken, extrairToken, responderAutenticado, clearAuthCookie } = require('./lib/auth-token');
 const {
   authenticate,
@@ -493,28 +499,21 @@ async function lerClientesTenant(tenantId) {
   }
 }
 
-function normalizarAreasCliente(val) {
-  if (!val) return [];
-  if (Array.isArray(val)) {
-    return val.map((a) => String(a).trim()).filter(Boolean);
+function validarPayloadCliente(body, existente = null) {
+  const docRaw = body.documento != null ? body.documento : body.cnpj;
+  if (docRaw != null && String(docRaw).trim()) {
+    const errDoc = validarDocumento(docRaw);
+    if (errDoc) return errDoc;
+    const fmt = normalizarDocumento(docRaw);
+    if (fmt === null) return 'CPF ou CNPJ invalido.';
   }
-  if (typeof val === 'string') {
-    return val.split(/[\n,;]+/).map((a) => a.trim()).filter(Boolean);
-  }
-  return [];
-}
-
-function normalizarClientePayload(body, existente = null) {
-  const nome = String(body.nome ?? existente?.nome ?? '').trim();
-  const endereco = String(body.endereco ?? existente?.endereco ?? '').trim();
-  const cnpjRaw = body.cnpj != null ? body.cnpj : existente?.cnpj;
-  const cnpj = cnpjRaw != null && String(cnpjRaw).trim() ? String(cnpjRaw).trim() : '';
-  const areas = 'areas' in (body || {})
-    ? normalizarAreasCliente(body.areas)
-    : (existente?.areas || []);
-  const obsRaw = body.observacoes != null ? body.observacoes : existente?.observacoes;
-  const observacoes = obsRaw != null ? String(obsRaw).trim() : '';
-  return { nome, endereco, cnpj, areas, observacoes };
+  const errEnd = validarEnderecoPartes({
+    logradouro: body.logradouro ?? existente?.logradouro,
+    cidade: body.cidade ?? existente?.cidade,
+    cep: body.cep ?? existente?.cep
+  });
+  if (errEnd && !body.endereco && !existente?.endereco) return errEnd;
+  return null;
 }
 
 async function validarClienteEmpresa(tenantId, nome) {
@@ -1065,12 +1064,14 @@ app.get('/api/clientes/todos', authenticate, requireTenantMember, async (req, re
 app.post('/api/clientes', authenticate, requireTenantAdmin, async (req, res) => {
   try {
     const tenantId = tenantIdAutenticado(req);
-    const dados = normalizarClientePayload(req.body || {});
+    const errVal = validarPayloadCliente(req.body || {});
+    if (errVal) return res.status(400).json({ error: errVal });
+    const dados = normalizarClienteDados(req.body || {});
     if (!dados.nome || dados.nome.length < 2) {
       return res.status(400).json({ error: 'Informe o nome do cliente (minimo 2 caracteres).' });
     }
     if (!dados.endereco || dados.endereco.length < 5) {
-      return res.status(400).json({ error: 'Informe o endereco completo do cliente.' });
+      return res.status(400).json({ error: 'Informe o endereco do cliente.' });
     }
     const clientes = await lerClientesTenant(tenantId);
     if (clientes.some((c) => c.nome.toLowerCase() === dados.nome.toLowerCase())) {
@@ -1080,9 +1081,17 @@ app.post('/api/clientes', authenticate, requireTenantAdmin, async (req, res) => 
       id: gerarId('cli'),
       nome: dados.nome,
       endereco: dados.endereco,
-      cnpj: dados.cnpj || null,
+      logradouro: dados.logradouro,
+      numero: dados.numero,
+      bairro: dados.bairro,
+      cidade: dados.cidade,
+      cep: dados.cep,
+      documento: dados.documento,
+      cnpj: dados.cnpj,
+      contatos: dados.contatos,
+      responsaveis: dados.responsaveis,
       areas: dados.areas,
-      observacoes: dados.observacoes || null,
+      observacoes: dados.observacoes,
       ativo: true,
       criadoEm: agoraISO()
     };
@@ -1109,7 +1118,9 @@ app.patch('/api/clientes/:id', authenticate, requireTenantAdmin, async (req, res
       await escreverJson(path.join(tenantId, 'clientes.json'), clientes);
       return res.json(clientes[idx]);
     }
-    const dados = normalizarClientePayload(body, clientes[idx]);
+    const errVal = validarPayloadCliente(body, clientes[idx]);
+    if (errVal) return res.status(400).json({ error: errVal });
+    const dados = normalizarClienteDados(body, clientes[idx]);
     if (dados.nome.length < 2) return res.status(400).json({ error: 'Nome invalido.' });
     if (dados.endereco.length < 5) return res.status(400).json({ error: 'Endereco invalido.' });
     if (clientes.some((c, i) => i !== idx && c.nome.toLowerCase() === dados.nome.toLowerCase())) {
@@ -1117,9 +1128,17 @@ app.patch('/api/clientes/:id', authenticate, requireTenantAdmin, async (req, res
     }
     clientes[idx].nome = dados.nome;
     clientes[idx].endereco = dados.endereco;
-    clientes[idx].cnpj = dados.cnpj || null;
+    clientes[idx].logradouro = dados.logradouro;
+    clientes[idx].numero = dados.numero;
+    clientes[idx].bairro = dados.bairro;
+    clientes[idx].cidade = dados.cidade;
+    clientes[idx].cep = dados.cep;
+    clientes[idx].documento = dados.documento;
+    clientes[idx].cnpj = dados.cnpj;
+    clientes[idx].contatos = dados.contatos;
+    clientes[idx].responsaveis = dados.responsaveis;
     clientes[idx].areas = dados.areas;
-    clientes[idx].observacoes = dados.observacoes || null;
+    clientes[idx].observacoes = dados.observacoes;
     if ('ativo' in req.body) clientes[idx].ativo = !!req.body.ativo;
     clientes[idx].atualizadoEm = agoraISO();
     await escreverJson(path.join(tenantId, 'clientes.json'), clientes);

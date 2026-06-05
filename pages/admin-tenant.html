@@ -118,19 +118,18 @@
       <!-- ============ TAB CLIENTES ============ -->
       <section class="tab-panel" data-panel="clientes">
         <div class="panel-head">
-          <h3 class="panel-head__title">Empresas-cliente</h3>
+          <h3 class="panel-head__title">Clientes</h3>
           <button type="button" class="btn btn--accent btn--sm" id="btn-novo-cliente">+ Cadastrar cliente</button>
         </div>
-        <p class="text-muted" style="margin: -6px 0 16px;">Os tecnicos escolhem o cliente desta lista ao cadastrar equipamentos.</p>
+        <p class="text-muted" style="margin: -6px 0 16px;">Clique no nome do cliente para ver os equipamentos. Os tecnicos escolhem o cliente desta lista ao cadastrar equipamentos.</p>
         <div class="table-wrap">
-          <table class="table">
+          <table class="table table--clientes">
             <thead>
               <tr>
                 <th>Nome</th>
-                <th>Endereco</th>
-                <th>Areas</th>
+                <th class="th-actions">Acoes</th>
                 <th>Status</th>
-                <th>Acoes</th>
+                <th>Endereco</th>
               </tr>
             </thead>
             <tbody id="tbl-clientes"></tbody>
@@ -295,6 +294,28 @@
     </div>
   </div>
 
+  <!-- MODAL: DETALHES / QR (equipamento) -->
+  <div class="modal-backdrop" id="modal-detalhes">
+    <div class="modal modal--detalhes">
+      <div class="modal__header">
+        <h3 id="md-titulo">Detalhes do equipamento</h3>
+        <button class="modal__close" data-close="modal-detalhes" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="modal__body" id="md-body"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: EQUIPAMENTOS DO CLIENTE -->
+  <div class="modal-backdrop" id="modal-cliente-equip">
+    <div class="modal modal--wide">
+      <div class="modal__header">
+        <h3 id="cliente-equip-titulo">Equipamentos do cliente</h3>
+        <button class="modal__close" data-close="modal-cliente-equip">&times;</button>
+      </div>
+      <div class="modal__body" id="cliente-equip-body"></div>
+    </div>
+  </div>
+
   <!-- MODAL: NOVO CLIENTE -->
   <div class="modal-backdrop" id="modal-cliente">
     <div class="modal modal--wide">
@@ -305,24 +326,51 @@
       <div class="modal__body">
         <form id="form-cliente">
           <div class="form-group">
-            <label class="form-label" for="cliente-nome">Nome da empresa-cliente *</label>
+            <label class="form-label" for="cliente-nome">Nome do cliente *</label>
             <input class="form-control" id="cliente-nome" required placeholder="Ex: Shopping Center Norte" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="cliente-endereco">Endereco completo *</label>
-            <textarea class="form-control" id="cliente-endereco" rows="2" required placeholder="Rua, numero, bairro, cidade, UF, CEP"></textarea>
+            <label class="form-label" for="cliente-documento">CPF ou CNPJ <span class="form-label__hint">(opcional)</span></label>
+            <input class="form-control" id="cliente-documento" placeholder="000.000.000-00 ou 00.000.000/0000-00" maxlength="18" />
+            <small class="form-error" id="err-cliente-documento"></small>
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label" for="cliente-cnpj">CNPJ <span class="form-label__hint">(opcional)</span></label>
-              <input class="form-control" id="cliente-cnpj" placeholder="00.000.000/0000-00" />
+          <fieldset class="form-fieldset">
+            <legend class="form-label">Endereco *</legend>
+            <div class="form-row">
+              <div class="form-group form-group--cep">
+                <label class="form-label" for="cliente-cep">CEP</label>
+                <input class="form-control" id="cliente-cep" placeholder="00000-000" maxlength="9" />
+              </div>
             </div>
+            <div class="form-group">
+              <label class="form-label" for="cliente-logradouro">Rua / Avenida / Estrada *</label>
+              <input class="form-control" id="cliente-logradouro" required placeholder="Ex: Av. Paulista" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="cliente-numero">Numero</label>
+                <input class="form-control" id="cliente-numero" placeholder="Ex: 1000 ou S/N" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cliente-bairro">Bairro</label>
+                <input class="form-control" id="cliente-bairro" placeholder="Ex: Bela Vista" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cliente-cidade">Cidade *</label>
+              <input class="form-control" id="cliente-cidade" required placeholder="Ex: Sao Paulo" />
+            </div>
+          </fieldset>
+          <div class="form-group">
+            <label class="form-label">Contatos <span class="form-label__hint">(telefone / WhatsApp, opcional)</span></label>
+            <div id="cliente-contatos-list" class="areas-list"></div>
+            <button type="button" class="btn btn--ghost btn--sm" id="btn-add-contato">+ Adicionar contato</button>
           </div>
           <div class="form-group">
-            <label class="form-label">Areas / ambientes <span class="form-label__hint">(opcional)</span></label>
-            <div id="cliente-areas-list" class="areas-list"></div>
-            <button type="button" class="btn btn--ghost btn--sm" id="btn-add-area">+ Adicionar ambiente</button>
-            <span class="form-label__hint">Ex.: Recepcao, Cozinha, Salao principal</span>
+            <label class="form-label">Responsaveis <span class="form-label__hint">(opcional)</span></label>
+            <div id="cliente-responsaveis-list" class="areas-list"></div>
+            <button type="button" class="btn btn--ghost btn--sm" id="btn-add-responsavel">+ Adicionar responsavel</button>
+            <span class="form-label__hint">Ex.: Recepcao, Joao — Gerente</span>
           </div>
           <div class="form-group">
             <label class="form-label" for="cliente-obs">Observacoes <span class="form-label__hint">(opcional)</span></label>
@@ -338,6 +386,7 @@
   </div>
 
   <script src="/assets/js/vendor/qrcode.min.js"></script>
+  <script src="/assets/js/cliente-form-utils.js"></script>
   <script src="/assets/js/firebase-config.js"></script>
   <script src="/assets/js/equipamento-ar-specs.js"></script>
   <script src="/assets/js/app-shell.js"></script>

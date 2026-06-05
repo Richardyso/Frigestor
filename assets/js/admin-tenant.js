@@ -205,9 +205,9 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               <span>Editar</span>
             </button>
-            <button class="row-actions__btn" data-a="qr" title="Gerar QR Code">
+            <button class="row-actions__btn" data-a="detalhes" title="Ver detalhes e QR Code">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-              <span>QR</span>
+              <span>Ver detalhes / QR</span>
             </button>
             <button class="row-actions__btn" data-a="hist" title="Ver historico de visitas">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -225,7 +225,7 @@
     tbody.querySelectorAll('tr').forEach((tr) => {
       const id = tr.dataset.id;
       tr.querySelector('[data-a="edit"]')?.addEventListener('click', () => abrirEdicao(id));
-      tr.querySelector('[data-a="qr"]')?.addEventListener('click', () => abrirQR(id));
+      tr.querySelector('[data-a="detalhes"]')?.addEventListener('click', () => abrirDetalhes(id));
       tr.querySelector('[data-a="hist"]')?.addEventListener('click', () => abrirHistEquip(id));
     });
   }
@@ -294,12 +294,55 @@
   });
 
   // -----------------------------------------------------------------------
-  // QR Code rapido
+  // Detalhes + QR Code (mesmo fluxo do tecnico em campo)
   // -----------------------------------------------------------------------
-  function abrirQR(id) {
+  function abrirDetalhes(id) {
     const e = equipamentos.find((x) => x.id === id);
     if (!e) return;
-    window.QR.imprimirQRCode(e);
+
+    document.getElementById('md-titulo').textContent = e.nomeModelo;
+    const body = document.getElementById('md-body');
+    body.innerHTML = `
+      <dl class="detalhe-grid">
+        <div><dt>Tipo</dt><dd>${UI.escapeHtml(e.tipoEquipamento)}</dd></div>
+        <div><dt>Numero de serie</dt><dd>${UI.escapeHtml(e.numeroSerie || '—')}</dd></div>
+        <div><dt>Cliente / Empresa</dt><dd>${UI.escapeHtml(e.clienteEmpresa)}</dd></div>
+        <div><dt>Localizacao</dt><dd>${UI.escapeHtml(e.localizacaoSetor)}</dd></div>
+        <div><dt>Tecnico responsavel</dt><dd>${UI.escapeHtml(e.tecnicoResponsavelNome)}</dd></div>
+        <div><dt>Data de instalacao</dt><dd>${UI.formatarData(e.dataInstalacao, { hora: false })}</dd></div>
+        <div><dt>Cadastrado em</dt><dd>${UI.formatarData(e.criadoEm)}</dd></div>
+        <div><dt>Ultima atualizacao</dt><dd>${UI.formatarData(e.atualizadoEm)}</dd></div>
+        ${window.ESPEC_AR?.htmlDetalhe(e) || ''}
+      </dl>
+      <div class="qr-card">
+        <div class="qr-card__box" id="qr-detalhes"></div>
+        <div class="qr-card__actions">
+          <strong>QR Code do equipamento</strong>
+          <span class="text-muted" style="font-size: 0.86rem;">Cole no equipamento para acesso rapido ao historico.</span>
+          <div class="flex gap-8" style="margin-top: 6px;">
+            <button type="button" class="btn btn--sm" id="btn-baixar-qr">Baixar PNG</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="btn-imprimir-qr">Imprimir</button>
+          </div>
+          <div class="qr-card__url" id="qr-url"></div>
+        </div>
+      </div>
+    `;
+
+    abrirModal('modal-detalhes');
+
+    try {
+      window.QR.gerarQRCode('qr-detalhes', e.id, { size: 144 });
+      document.getElementById('qr-url').textContent = window.QR.urlPublica(e.id);
+    } catch (err) {
+      console.error(err);
+    }
+
+    document.getElementById('btn-baixar-qr')?.addEventListener('click', () => {
+      window.QR.baixarQRCode(e.id, e.nomeModelo);
+    });
+    document.getElementById('btn-imprimir-qr')?.addEventListener('click', () => {
+      window.QR.imprimirQRCode(e);
+    });
   }
 
   // -----------------------------------------------------------------------
@@ -429,37 +472,40 @@
   // Clientes (empresas atendidas)
   // -----------------------------------------------------------------------
   let clienteEditandoId = null;
-
-  function resumoAreas(c) {
-    const lista = Array.isArray(c.areas) ? c.areas : [];
-    if (!lista.length) return '—';
-    if (lista.length <= 2) return lista.map((a) => UI.escapeHtml(a)).join(', ');
-    return `${UI.escapeHtml(lista[0])}, ${UI.escapeHtml(lista[1])} +${lista.length - 2}`;
-  }
+  const CF = () => window.CLIENTE_FORM;
 
   function limparFormCliente() {
     clienteEditandoId = null;
     document.getElementById('modal-cliente-titulo').textContent = 'Cadastrar cliente';
     document.getElementById('form-cliente')?.reset();
-    const lista = document.getElementById('cliente-areas-list');
-    if (lista) lista.innerHTML = '';
+    document.getElementById('err-cliente-documento').textContent = '';
+    ['cliente-contatos-list', 'cliente-responsaveis-list'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '';
+    });
   }
 
-  function adicionarCampoArea(valor = '') {
-    const lista = document.getElementById('cliente-areas-list');
+  function adicionarCampoLista(containerId, inputClass, valor, placeholder) {
+    const lista = document.getElementById(containerId);
     if (!lista) return;
     const row = document.createElement('div');
     row.className = 'areas-list__row';
     row.innerHTML = `
-      <input type="text" class="form-control cliente-area-input" placeholder="Ex: Recepcao" value="${UI.escapeHtml(valor)}" />
-      <button type="button" class="btn btn--ghost btn--sm" data-a="rem-area" title="Remover">&times;</button>
+      <input type="text" class="form-control ${inputClass}" placeholder="${UI.escapeHtml(placeholder)}" value="${UI.escapeHtml(valor)}" />
+      <button type="button" class="btn btn--ghost btn--sm" data-a="rem-item" title="Remover">&times;</button>
     `;
-    row.querySelector('[data-a="rem-area"]').addEventListener('click', () => row.remove());
+    const inp = row.querySelector('input');
+    if (inputClass === 'cliente-contato-input') {
+      inp.addEventListener('input', () => {
+        inp.value = CF()?.formatarTelefoneInput(inp.value) || inp.value;
+      });
+    }
+    row.querySelector('[data-a="rem-item"]').addEventListener('click', () => row.remove());
     lista.appendChild(row);
   }
 
-  function lerAreasDoFormulario() {
-    return Array.from(document.querySelectorAll('.cliente-area-input'))
+  function lerListaDoFormulario(selector) {
+    return Array.from(document.querySelectorAll(selector))
       .map((inp) => inp.value.trim())
       .filter(Boolean);
   }
@@ -468,48 +514,138 @@
     clienteEditandoId = c.id;
     document.getElementById('modal-cliente-titulo').textContent = 'Editar cliente';
     document.getElementById('cliente-nome').value = c.nome || '';
-    document.getElementById('cliente-endereco').value = c.endereco || '';
-    document.getElementById('cliente-cnpj').value = c.cnpj || '';
+    document.getElementById('cliente-documento').value = c.documento || c.cnpj || '';
+    document.getElementById('cliente-logradouro').value = c.logradouro || c.endereco || '';
+    document.getElementById('cliente-numero').value = c.numero || '';
+    document.getElementById('cliente-bairro').value = c.bairro || '';
+    document.getElementById('cliente-cidade').value = c.cidade || '';
+    document.getElementById('cliente-cep').value = c.cep || '';
     document.getElementById('cliente-obs').value = c.observacoes || '';
-    const lista = document.getElementById('cliente-areas-list');
-    if (lista) lista.innerHTML = '';
-    const areas = Array.isArray(c.areas) ? c.areas : [];
-    if (areas.length) areas.forEach((a) => adicionarCampoArea(a));
-    else adicionarCampoArea('');
+    document.getElementById('err-cliente-documento').textContent = '';
+
+    const contatos = document.getElementById('cliente-contatos-list');
+    const responsaveis = document.getElementById('cliente-responsaveis-list');
+    if (contatos) contatos.innerHTML = '';
+    if (responsaveis) responsaveis.innerHTML = '';
+
+    const listaContatos = Array.isArray(c.contatos) ? c.contatos : [];
+    if (listaContatos.length) {
+      listaContatos.forEach((v) => adicionarCampoLista('cliente-contatos-list', 'cliente-contato-input', v, '(11) 99999-9999'));
+    } else {
+      adicionarCampoLista('cliente-contatos-list', 'cliente-contato-input', '', '(11) 99999-9999');
+    }
+
+    const listaResp = Array.isArray(c.responsaveis) ? c.responsaveis : [];
+    if (listaResp.length) {
+      listaResp.forEach((v) => adicionarCampoLista('cliente-responsaveis-list', 'cliente-responsavel-input', v, 'Ex: Recepcao ou Joao — Gerente'));
+    } else {
+      adicionarCampoLista('cliente-responsaveis-list', 'cliente-responsavel-input', '', 'Ex: Recepcao ou Joao — Gerente');
+    }
+  }
+
+  function abrirEquipamentosCliente(nomeCliente) {
+    const lista = equipamentos
+      .filter((e) => e.clienteEmpresa === nomeCliente)
+      .sort((a, b) => a.nomeModelo.localeCompare(b.nomeModelo, 'pt-BR'));
+    document.getElementById('cliente-equip-titulo').textContent = `Equipamentos — ${nomeCliente}`;
+    const body = document.getElementById('cliente-equip-body');
+    if (!lista.length) {
+      body.innerHTML = '<p class="text-muted">Nenhum equipamento cadastrado para este cliente.</p>';
+    } else {
+      body.innerHTML = `
+        <div class="table-wrap">
+          <table class="table table--equip">
+            <thead>
+              <tr>
+                <th class="th-actions">Acoes</th>
+                <th>Nome / Modelo</th>
+                <th>Tipo</th>
+                <th>Localizacao</th>
+                <th>Tecnico</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lista.map((e) => `
+                <tr data-id="${UI.escapeHtml(e.id)}">
+                  <td class="td-actions" data-label="Acoes">
+                    <div class="row-actions">
+                      <button type="button" class="row-actions__btn" data-a="detalhes" title="Ver detalhes e QR">
+                        <span>Ver detalhes / QR</span>
+                      </button>
+                      <button type="button" class="row-actions__btn" data-a="edit" title="Editar">
+                        <span>Editar</span>
+                      </button>
+                    </div>
+                  </td>
+                  <td data-label="Nome"><strong>${UI.escapeHtml(e.nomeModelo)}</strong></td>
+                  <td data-label="Tipo">${UI.escapeHtml(e.tipoEquipamento)}</td>
+                  <td data-label="Localizacao">${UI.escapeHtml(e.localizacaoSetor)}</td>
+                  <td data-label="Tecnico">${UI.escapeHtml(e.tecnicoResponsavelNome)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+      body.querySelectorAll('tr[data-id]').forEach((tr) => {
+        const eqId = tr.dataset.id;
+        tr.querySelector('[data-a="detalhes"]')?.addEventListener('click', () => {
+          fecharModal('modal-cliente-equip');
+          abrirDetalhes(eqId);
+        });
+        tr.querySelector('[data-a="edit"]')?.addEventListener('click', () => {
+          fecharModal('modal-cliente-equip');
+          abrirEdicao(eqId);
+        });
+      });
+    }
+    abrirModal('modal-cliente-equip');
   }
 
   function renderClientes() {
     const tbody = document.getElementById('tbl-clientes');
     if (!tbody) return;
     if (!clientes.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum cliente cadastrado.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum cliente cadastrado.</td></tr>';
       return;
     }
     tbody.innerHTML = clientes
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
-      .map((c) => `
-        <tr data-id="${UI.escapeHtml(c.id)}">
-          <td data-label="Nome"><strong>${UI.escapeHtml(c.nome)}</strong>${c.cnpj ? `<br/><span class="text-dim cell-sub">${UI.escapeHtml(c.cnpj)}</span>` : ''}</td>
-          <td data-label="Endereco">${UI.escapeHtml(c.endereco || '—')}</td>
-          <td data-label="Areas">${resumoAreas(c)}</td>
-          <td data-label="Status">
-            <span class="badge ${c.ativo !== false ? 'badge--success' : 'badge--muted'}">${c.ativo !== false ? 'Ativo' : 'Inativo'}</span>
+      .map((c) => {
+        const doc = c.documento || c.cnpj;
+        return `
+        <tr data-id="${UI.escapeHtml(c.id)}" class="tr-cliente">
+          <td data-label="Nome" class="td-cliente-nome" data-a="abrir-equip">
+            <strong>${UI.escapeHtml(c.nome)}</strong>
+            ${doc ? `<br/><span class="text-dim cell-sub">${UI.escapeHtml(doc)}</span>` : ''}
           </td>
-          <td data-label="Acoes" class="cell-actions">
+          <td data-label="Acoes" class="cell-actions td-actions">
             <button type="button" class="btn btn--ghost btn--sm" data-a="edit">Editar</button>
             <button type="button" class="btn btn--ghost btn--sm" data-a="toggle">${c.ativo !== false ? 'Desativar' : 'Ativar'}</button>
           </td>
-        </tr>
-      `).join('');
+          <td data-label="Status">
+            <span class="badge ${c.ativo !== false ? 'badge--success' : 'badge--muted'}">${c.ativo !== false ? 'Ativo' : 'Inativo'}</span>
+          </td>
+          <td data-label="Endereco">${UI.escapeHtml(c.endereco || '—')}</td>
+        </tr>`;
+      }).join('');
 
     tbody.querySelectorAll('tr').forEach((tr) => {
       const id = tr.dataset.id;
-      tr.querySelector('[data-a="toggle"]')?.addEventListener('click', () => toggleCliente(id));
-      tr.querySelector('[data-a="edit"]')?.addEventListener('click', () => {
-        const c = clientes.find((x) => x.id === id);
+      const c = clientes.find((x) => x.id === id);
+      tr.querySelector('[data-a="toggle"]')?.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        toggleCliente(id);
+      });
+      tr.querySelector('[data-a="edit"]')?.addEventListener('click', (ev) => {
+        ev.stopPropagation();
         if (!c) return;
         preencherFormCliente(c);
         abrirModal('modal-cliente');
+      });
+      tr.querySelector('[data-a="abrir-equip"]')?.addEventListener('click', () => {
+        if (!c) return;
+        abrirEquipamentosCliente(c.nome);
       });
     });
   }
@@ -528,21 +664,70 @@
 
   document.getElementById('btn-novo-cliente')?.addEventListener('click', () => {
     limparFormCliente();
-    adicionarCampoArea('');
+    adicionarCampoLista('cliente-contatos-list', 'cliente-contato-input', '', '(11) 99999-9999');
+    adicionarCampoLista('cliente-responsaveis-list', 'cliente-responsavel-input', '', 'Ex: Recepcao ou Joao — Gerente');
     abrirModal('modal-cliente');
   });
 
-  document.getElementById('btn-add-area')?.addEventListener('click', () => adicionarCampoArea(''));
+  document.getElementById('btn-add-contato')?.addEventListener('click', () => {
+    adicionarCampoLista('cliente-contatos-list', 'cliente-contato-input', '', '(11) 99999-9999');
+  });
+
+  document.getElementById('btn-add-responsavel')?.addEventListener('click', () => {
+    adicionarCampoLista('cliente-responsaveis-list', 'cliente-responsavel-input', '', 'Ex: Recepcao ou Joao — Gerente');
+  });
+
+  document.getElementById('cliente-documento')?.addEventListener('input', (ev) => {
+    const inp = ev.target;
+    inp.value = CF()?.formatarDocumentoInput(inp.value) || inp.value;
+    document.getElementById('err-cliente-documento').textContent = '';
+  });
+
+  document.getElementById('cliente-cep')?.addEventListener('input', (ev) => {
+    const inp = ev.target;
+    inp.value = CF()?.formatarCepInput(inp.value) || inp.value;
+  });
+
+  document.getElementById('cliente-cep')?.addEventListener('blur', async (ev) => {
+    const cep = ev.target.value;
+    const dados = await CF()?.buscarEnderecoPorCep(cep);
+    if (!dados) return;
+    const log = document.getElementById('cliente-logradouro');
+    const bairro = document.getElementById('cliente-bairro');
+    const cidade = document.getElementById('cliente-cidade');
+    if (log && dados.logradouro && !log.value.trim()) log.value = dados.logradouro;
+    if (bairro && dados.bairro && !bairro.value.trim()) bairro.value = dados.bairro;
+    if (cidade && dados.cidade) {
+      const comUf = dados.uf ? `${dados.cidade} — ${dados.uf}` : dados.cidade;
+      if (!cidade.value.trim()) cidade.value = comUf;
+    }
+    if (dados.cep) ev.target.value = dados.cep;
+  });
 
   document.getElementById('form-cliente')?.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const form = document.getElementById('form-cliente');
     if (!form.reportValidity()) return;
+
+    const documento = document.getElementById('cliente-documento').value.trim();
+    const errDoc = CF()?.validarDocumento(documento);
+    const errEl = document.getElementById('err-cliente-documento');
+    if (errDoc) {
+      errEl.textContent = errDoc;
+      return;
+    }
+    errEl.textContent = '';
+
     const payload = {
       nome: document.getElementById('cliente-nome').value.trim(),
-      endereco: document.getElementById('cliente-endereco').value.trim(),
-      cnpj: document.getElementById('cliente-cnpj').value.trim(),
-      areas: lerAreasDoFormulario(),
+      documento,
+      logradouro: document.getElementById('cliente-logradouro').value.trim(),
+      numero: document.getElementById('cliente-numero').value.trim(),
+      bairro: document.getElementById('cliente-bairro').value.trim(),
+      cidade: document.getElementById('cliente-cidade').value.trim(),
+      cep: document.getElementById('cliente-cep').value.trim(),
+      contatos: lerListaDoFormulario('.cliente-contato-input'),
+      responsaveis: lerListaDoFormulario('.cliente-responsavel-input'),
       observacoes: document.getElementById('cliente-obs').value.trim()
     };
     const btn = document.getElementById('btn-salvar-cliente');
