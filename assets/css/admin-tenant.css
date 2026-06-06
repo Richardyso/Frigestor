@@ -229,6 +229,28 @@ main.admin-tenant {
 @media (max-width: 720px) {
   main.admin-tenant > .container { padding: 0; }
 
+  .tab-panel[data-panel="clientes"] {
+    padding-left: 14px;
+    padding-right: 14px;
+    box-sizing: border-box;
+  }
+  .tab-panel[data-panel="clientes"] .panel-head {
+    padding-right: 0;
+  }
+  .cliente-card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .cliente-card__actions {
+    width: 100%;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-soft);
+  }
+  .cliente-card__actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
   /* ====== Tabelas viram CARDS no celular (equipamentos + historico) ====== */
   .table-wrap:has(.table--equip),
   .table-wrap:has(.table--hist) {
@@ -374,28 +396,66 @@ main.admin-tenant {
   padding-inline: 10px;
 }
 
-/* Tabela de clientes: sem scroll horizontal */
-.table-wrap:has(.table--clientes) {
-  overflow: visible;
+/* Lista de clientes (cards — evita quebra de tabela no mobile) */
+.clientes-hint { margin: -6px 0 16px; }
+.clientes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
 }
-.table--clientes th,
-.table--clientes td {
-  white-space: normal;
+.clientes-empty {
+  padding: 28px 16px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
 }
-.table--clientes .cell-actions {
-  white-space: nowrap;
-  width: 1%;
+.cliente-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
-.tr-cliente--inativo .td-cliente-nome strong {
-  opacity: 0.72;
-}
-
-.table--clientes .td-cliente-nome {
+.cliente-card--inativo { opacity: 0.88; }
+.cliente-card__info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
-.table--clientes .td-cliente-nome:hover strong {
+.cliente-card__info:hover .cliente-card__nome {
   color: var(--color-primary);
   text-decoration: underline;
+}
+.cliente-card__nome {
+  font-size: 1rem;
+  line-height: 1.3;
+  word-break: break-word;
+}
+.cliente-card__actions {
+  flex-shrink: 0;
+}
+.cliente-card__actions .btn {
+  white-space: nowrap;
 }
 
 .form-fieldset {
@@ -410,42 +470,6 @@ main.admin-tenant {
 .form-group--cep { max-width: 160px; }
 
 @media (max-width: 720px) {
-  .table-wrap:has(.table--clientes) {
-    overflow: visible;
-    border: none;
-    background: transparent;
-  }
-  .table--clientes { display: block; width: 100%; }
-  .table--clientes thead { display: none; }
-  .table--clientes tbody { display: block; }
-  .table--clientes tr {
-    display: block;
-    width: 100%;
-    background: var(--bg-1);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-lg);
-    padding: 14px;
-    margin-bottom: 12px;
-    box-shadow: var(--shadow-sm);
-  }
-  .table--clientes td {
-    display: block;
-    padding: 0;
-    border: none;
-    white-space: normal;
-  }
-  .table--clientes td::before { content: none; }
-  .table--clientes .td-cliente-nome {
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px dashed var(--border-soft);
-  }
-  .table--clientes .td-actions {
-    display: flex;
-    justify-content: flex-end;
-  }
-  .table--clientes .td-actions .btn { width: 100%; justify-content: center; }
-
   #modal-cliente .form-row {
     grid-template-columns: 1fr;
   }

@@ -645,40 +645,40 @@
   }
 
   function renderClientes() {
-    const tbody = document.getElementById('tbl-clientes');
-    if (!tbody) return;
+    const lista = document.getElementById('clientes-list');
+    if (!lista) return;
     if (!clientes.length) {
-      tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">Nenhum cliente cadastrado.</td></tr>';
+      lista.innerHTML = '<p class="text-center text-muted clientes-empty">Nenhum cliente cadastrado.</p>';
       return;
     }
-    tbody.innerHTML = clientes
+    lista.innerHTML = clientes
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
       .map((c) => {
         const doc = c.documento || c.cnpj;
         const inativo = c.ativo === false;
         return `
-        <tr data-id="${UI.escapeHtml(c.id)}" class="tr-cliente${inativo ? ' tr-cliente--inativo' : ''}">
-          <td data-label="Nome" class="td-cliente-nome" data-a="abrir-equip">
-            <strong>${UI.escapeHtml(c.nome)}</strong>
-            ${doc ? `<br/><span class="text-dim cell-sub">${UI.escapeHtml(doc)}</span>` : ''}
-            ${inativo ? '<br/><span class="badge badge--muted">Inativo</span>' : ''}
-          </td>
-          <td data-label="Acoes" class="cell-actions td-actions">
+        <article class="cliente-card${inativo ? ' cliente-card--inativo' : ''}" data-id="${UI.escapeHtml(c.id)}">
+          <button type="button" class="cliente-card__info" data-a="abrir-equip">
+            <strong class="cliente-card__nome">${UI.escapeHtml(c.nome)}</strong>
+            ${doc ? `<span class="text-dim cell-sub">${UI.escapeHtml(doc)}</span>` : ''}
+            ${inativo ? '<span class="badge badge--muted">Inativo</span>' : ''}
+          </button>
+          <div class="cliente-card__actions">
             <button type="button" class="btn btn--ghost btn--sm" data-a="edit">Editar</button>
-          </td>
-        </tr>`;
+          </div>
+        </article>`;
       }).join('');
 
-    tbody.querySelectorAll('tr').forEach((tr) => {
-      const id = tr.dataset.id;
+    lista.querySelectorAll('.cliente-card').forEach((card) => {
+      const id = card.dataset.id;
       const c = clientes.find((x) => x.id === id);
-      tr.querySelector('[data-a="edit"]')?.addEventListener('click', (ev) => {
+      card.querySelector('[data-a="edit"]')?.addEventListener('click', (ev) => {
         ev.stopPropagation();
         if (!c) return;
         preencherFormCliente(c);
         abrirModal('modal-cliente');
       });
-      tr.querySelector('[data-a="abrir-equip"]')?.addEventListener('click', () => {
+      card.querySelector('[data-a="abrir-equip"]')?.addEventListener('click', () => {
         if (!c) return;
         abrirEquipamentosCliente(c.nome);
       });
