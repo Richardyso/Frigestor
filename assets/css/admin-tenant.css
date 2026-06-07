@@ -458,6 +458,21 @@ main.admin-tenant {
   white-space: nowrap;
 }
 
+.instalador-edit__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.instalador-edit__row .form-control { flex: 1 1 180px; min-width: 0; }
+.instalador-edit__manual { margin-top: 8px; }
+
+@media (max-width: 560px) {
+  .instalador-edit__row { flex-direction: column; align-items: stretch; }
+  .instalador-edit__row .btn { width: 100%; justify-content: center; }
+}
+
 .form-fieldset {
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 10px;

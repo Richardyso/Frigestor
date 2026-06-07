@@ -4,7 +4,7 @@
  * Painel do tecnico de campo:
  *   - Lista todos os equipamentos do tenant (com filtros)
  *   - Detalhes, QR Code, registro de visitas
- *   - Cadastro de equipamento / instalacao
+ *   - Cadastro de equipamento e registro de visitas
  */
 
 (function () {
@@ -27,7 +27,6 @@
   const $listaEquip = document.getElementById('lista-equipamentos');
   const $metaEquip = document.getElementById('meta-equip');
   const $btnNovo = document.getElementById('btn-novo-equip');
-  const $btnInstalacao = document.getElementById('btn-nova-instalacao');
   const $btnCadastrarVisita = document.getElementById('btn-cadastrar-visita');
   const idsFiltro = ['f-cliente', 'f-tipo', 'f-de', 'f-ate'];
 
@@ -443,11 +442,9 @@
     }
   });
 
-  async function abrirFormNovoEquip(opts = {}) {
-    const titulo = opts.titulo || 'Cadastrar novo equipamento';
-    const btnTexto = opts.btnTexto || 'Cadastrar equipamento';
-    document.getElementById('modal-novo-titulo').textContent = titulo;
-    document.getElementById('btn-salvar-equip').textContent = btnTexto;
+  async function abrirFormNovoEquip() {
+    document.getElementById('modal-novo-titulo').textContent = 'Cadastrar novo equipamento';
+    document.getElementById('btn-salvar-equip').textContent = 'Cadastrar novo equipamento';
     document.getElementById('form-novo').reset();
     document.getElementById('novo-tecnico-display').value = usuario.nome;
     await carregarClientes();
@@ -457,18 +454,12 @@
     window.ESPEC_AR?.renderFormulario('novo-ar-specs', 'novo');
     ['err-novo-nome', 'err-novo-tipo', 'err-novo-local', 'err-novo-cliente', 'err-novo-data']
       .forEach((id) => { const el = document.getElementById(id); if (el) el.textContent = ''; });
-    if (opts.dataHoje) {
-      document.getElementById('novo-data').value = new Date().toISOString().slice(0, 10);
-    }
+    document.getElementById('novo-data').value = new Date().toISOString().slice(0, 10);
     abrirModal('modal-novo');
   }
 
   $btnNovo?.addEventListener('click', () => {
-    abrirFormNovoEquip({ titulo: 'Cadastrar novo equipamento', btnTexto: 'Cadastrar equipamento' });
-  });
-
-  $btnInstalacao?.addEventListener('click', () => {
-    abrirFormNovoEquip({ titulo: 'Cadastrar instalacao', btnTexto: 'Cadastrar instalacao', dataHoje: true });
+    abrirFormNovoEquip();
   });
 
   document.getElementById('form-novo').addEventListener('submit', async (ev) => {

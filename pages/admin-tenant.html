@@ -240,15 +240,21 @@
             <label class="form-label">Cliente / Empresa</label>
             <select class="form-control" id="edit-cliente" required></select>
           </div>
-          <div class="form-group">
-            <label class="form-label">Tecnico responsavel</label>
-            <select class="form-control" id="edit-tec"></select>
+          <div class="form-group instalador-edit">
+            <label class="form-label" for="edit-tec">Instalador / Tecnico responsavel</label>
+            <div class="instalador-edit__row">
+              <select class="form-control" id="edit-tec"></select>
+              <button type="button" class="btn btn--ghost btn--sm" id="btn-add-tec-from-edit">+ Adicionar tecnico</button>
+            </div>
+            <input class="form-control instalador-edit__manual" id="edit-tec-nome-manual" placeholder="Nome do instalador (sem cadastro no sistema)" hidden />
+            <span class="form-label__hint">Escolha um tecnico cadastrado ou selecione &quot;Informar nome&quot; para digitar manualmente.</span>
+            <small class="form-error" id="err-edit-instalador"></small>
           </div>
           <div id="edit-ar-specs"></div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Data de instalacao <span class="form-label__hint">(imutavel)</span></label>
-              <input class="form-control" id="edit-data-display" disabled />
+              <label class="form-label" for="edit-data">Data de instalacao</label>
+              <input class="form-control" type="date" id="edit-data" required />
             </div>
             <div class="form-group">
               <label class="form-label">Ultima atualizacao</label>
@@ -353,6 +359,12 @@
             <label class="form-label">Contatos <span class="form-label__hint">(telefone / WhatsApp, opcional)</span></label>
             <div id="cliente-contatos-list" class="contatos-list"></div>
             <button type="button" class="btn btn--ghost btn--sm" id="btn-add-contato">+ Adicionar numero</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-mails <span class="form-label__hint">(opcional)</span></label>
+            <div id="cliente-emails-list" class="contatos-list"></div>
+            <button type="button" class="btn btn--ghost btn--sm" id="btn-add-email">+ Adicionar e-mail</button>
+            <small class="form-error" id="err-cliente-email"></small>
           </div>
           <div class="form-group">
             <label class="form-label" for="cliente-obs">Observacoes <span class="form-label__hint">(opcional)</span></label>

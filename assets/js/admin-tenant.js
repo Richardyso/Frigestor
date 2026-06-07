@@ -5,7 +5,7 @@
  *   - Estatisticas rapidas
  *   - Gestao de tecnicos (criar, ativar/desativar)
  *   - Tabela de equipamentos com filtros (cliente, tipo, tecnico, datas)
- *   - Edicao (sem dataInstalacao), exclusao, QR e historico de cada equipamento
+ *   - Edicao de equipamentos (instalador e data de instalacao pelo admin)
  *   - Aba "Historico global" com todas as visitas
  */
 
@@ -30,6 +30,8 @@
   let usuarios     = [];
   let visitas      = [];
   let clientes     = [];
+  let editEquipIdPendente = null;
+  const INSTALADOR_MANUAL = '__manual__';
 
   // -----------------------------------------------------------------------
   // Modais
@@ -127,14 +129,77 @@
 
     preencherSelectClientes('edit-cliente', '', false);
 
-    const tecnicos = usuarios.filter((u) => u.role === 'tecnico');
+    const tecnicos = listarTecnicosCadastrados();
     const fTec = document.getElementById('f-tec');
     fTec.innerHTML = '<option value="">Todos</option>' +
       tecnicos.map((t) => `<option value="${UI.escapeHtml(t.uid)}">${UI.escapeHtml(t.nome)}</option>`).join('');
 
-    // popular tambem o select de edicao
-    const editTec = document.getElementById('edit-tec');
-    editTec.innerHTML = tecnicos.map((t) => `<option value="${UI.escapeHtml(t.uid)}">${UI.escapeHtml(t.nome)}</option>`).join('');
+    preencherSelectInstaladorEdit();
+  }
+
+  function listarTecnicosCadastrados() {
+    return usuarios.filter((u) => u.role === 'tecnico');
+  }
+
+  function preencherSelectInstaladorEdit(selecionadoUid, nomeManual) {
+    const sel = document.getElementById('edit-tec');
+    if (!sel) return;
+    const tecnicos = listarTecnicosCadastrados();
+    const opts = tecnicos.map((t) =>
+      `<option value="${UI.escapeHtml(t.uid)}">${UI.escapeHtml(t.nome)}</option>`
+    );
+    opts.push(`<option value="${INSTALADOR_MANUAL}">Informar nome (sem cadastro)</option>`);
+    sel.innerHTML = opts.join('');
+
+    const manualInp = document.getElementById('edit-tec-nome-manual');
+    const uidValido = selecionadoUid && tecnicos.some((t) => t.uid === selecionadoUid);
+    if (uidValido) {
+      sel.value = selecionadoUid;
+      if (manualInp) { manualInp.hidden = true; manualInp.value = ''; }
+    } else if (nomeManual || selecionadoUid) {
+      sel.value = INSTALADOR_MANUAL;
+      if (manualInp) {
+        manualInp.hidden = false;
+        manualInp.value = nomeManual || '';
+      }
+    } else if (tecnicos.length) {
+      sel.value = tecnicos[0].uid;
+      if (manualInp) { manualInp.hidden = true; manualInp.value = ''; }
+    } else {
+      sel.value = INSTALADOR_MANUAL;
+      if (manualInp) { manualInp.hidden = false; manualInp.value = nomeManual || ''; }
+    }
+    atualizarCampoInstaladorManual();
+  }
+
+  function atualizarCampoInstaladorManual() {
+    const sel = document.getElementById('edit-tec');
+    const manualInp = document.getElementById('edit-tec-nome-manual');
+    if (!sel || !manualInp) return;
+    const manual = sel.value === INSTALADOR_MANUAL;
+    manualInp.hidden = !manual;
+    if (!manual) manualInp.value = '';
+  }
+
+  function lerInstaladorDoFormulario() {
+    const sel = document.getElementById('edit-tec');
+    const manualInp = document.getElementById('edit-tec-nome-manual');
+    if (!sel) return null;
+    if (sel.value === INSTALADOR_MANUAL) {
+      const nome = manualInp?.value.trim() || '';
+      if (!nome) return null;
+      return { tecnicoResponsavelUid: null, tecnicoResponsavelNome: nome };
+    }
+    const tec = usuarios.find((u) => u.uid === sel.value);
+    if (!tec) return null;
+    return { tecnicoResponsavelUid: tec.uid, tecnicoResponsavelNome: tec.nome };
+  }
+
+  function dataInstalacaoParaInput(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toISOString().slice(0, 10);
   }
 
   // listeners dos filtros
@@ -236,15 +301,17 @@
   function abrirEdicao(id) {
     const e = equipamentos.find((x) => x.id === id);
     if (!e) return;
+    editEquipIdPendente = id;
     document.getElementById('edit-id').value = e.id;
     document.getElementById('edit-nome').value = e.nomeModelo;
     preencherTiposEquipamento('edit-tipo', e.tipoEquipamento);
     document.getElementById('edit-serie').value = e.numeroSerie;
     document.getElementById('edit-local').value = e.localizacaoSetor;
     preencherSelectClientes('edit-cliente', e.clienteEmpresa, false);
-    document.getElementById('edit-tec').value = e.tecnicoResponsavelUid;
-    document.getElementById('edit-data-display').value = UI.formatarData(e.dataInstalacao, { hora: false });
+    preencherSelectInstaladorEdit(e.tecnicoResponsavelUid, e.tecnicoResponsavelNome);
+    document.getElementById('edit-data').value = dataInstalacaoParaInput(e.dataInstalacao);
     document.getElementById('edit-atualizado-display').value = UI.formatarData(e.atualizadoEm);
+    document.getElementById('err-edit-instalador').textContent = '';
     window.ESPEC_AR?.renderFormulario('edit-ar-specs', 'edit', e);
     abrirModal('modal-edit');
   }
@@ -264,9 +331,19 @@
       return;
     }
     const id = document.getElementById('edit-id').value;
-    const tecUid = document.getElementById('edit-tec').value;
-    const tec = usuarios.find((u) => u.uid === tecUid);
-    if (!tec) { window.UI.toast('Tecnico invalido.', 'danger'); return; }
+    const instalador = lerInstaladorDoFormulario();
+    const errInst = document.getElementById('err-edit-instalador');
+    if (!instalador) {
+      errInst.textContent = 'Selecione um tecnico ou informe o nome do instalador.';
+      return;
+    }
+    errInst.textContent = '';
+
+    const dataInst = document.getElementById('edit-data').value;
+    if (!dataInst) {
+      window.UI.toast('Informe a data de instalacao.', 'danger');
+      return;
+    }
 
     const payload = {
       nomeModelo:       document.getElementById('edit-nome').value.trim(),
@@ -274,8 +351,9 @@
       numeroSerie:      document.getElementById('edit-serie').value.trim(),
       localizacaoSetor: document.getElementById('edit-local').value.trim(),
       clienteEmpresa:   document.getElementById('edit-cliente').value.trim(),
-      tecnicoResponsavelUid:  tec.uid,
-      tecnicoResponsavelNome: tec.nome,
+      tecnicoResponsavelUid:  instalador.tecnicoResponsavelUid,
+      tecnicoResponsavelNome: instalador.tecnicoResponsavelNome,
+      dataInstalacao: dataInst,
       ...(window.ESPEC_AR?.lerValores('edit') || {})
     };
 
@@ -435,7 +513,20 @@
     }
   }
 
+  document.getElementById('edit-tec')?.addEventListener('change', atualizarCampoInstaladorManual);
+
+  document.getElementById('btn-add-tec-from-edit')?.addEventListener('click', () => {
+    editEquipIdPendente = document.getElementById('edit-id')?.value || editEquipIdPendente;
+    document.getElementById('form-novo-tec')?.reset();
+    ['err-tec-nome', 'err-tec-email', 'err-tec-senha'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '';
+    });
+    abrirModal('modal-novo-tec');
+  });
+
   document.getElementById('btn-novo-tec').addEventListener('click', () => {
+    editEquipIdPendente = null;
     document.getElementById('form-novo-tec').reset();
     ['err-tec-nome', 'err-tec-email', 'err-tec-senha'].forEach((id) => document.getElementById(id).textContent = '');
     abrirModal('modal-novo-tec');
@@ -457,10 +548,17 @@
     const btn = document.getElementById('btn-salvar-tec');
     const fim = window.UI.botaoLoading(btn, 'Criando...');
     try {
-      await window.DB.usuarios.criar({ nome, email, senha, role: 'tecnico' });
+      const criado = await window.DB.usuarios.criar({ nome, email, senha, role: 'tecnico' });
       window.UI.toast('Tecnico criado com sucesso!', 'success');
       fecharModal('modal-novo-tec');
-      await carregarTudo();
+      usuarios = await window.DB.usuarios.listar();
+      renderFiltrosOptions();
+      renderTecnicos();
+      if (editEquipIdPendente && document.getElementById('modal-edit')?.classList.contains('is-open')) {
+        preencherSelectInstaladorEdit(criado?.uid, null);
+      } else {
+        await carregarTudo();
+      }
     } catch (err) {
       window.UI.toast(`Erro: ${err.message}`, 'danger');
     } finally {
@@ -496,8 +594,75 @@
     document.getElementById('form-cliente')?.reset();
     document.getElementById('err-cliente-documento').textContent = '';
     const lista = document.getElementById('cliente-contatos-list');
+    const emails = document.getElementById('cliente-emails-list');
     if (lista) lista.innerHTML = '';
+    if (emails) emails.innerHTML = '';
+    document.getElementById('err-cliente-email').textContent = '';
     atualizarBotaoToggleCliente();
+  }
+
+  function adicionarEmailRow(email = '', responsavel = '') {
+    const lista = document.getElementById('cliente-emails-list');
+    if (!lista) return;
+    const row = document.createElement('div');
+    row.className = 'contato-row';
+    row.innerHTML = `
+      <input type="email" class="form-control cliente-email-endereco" inputmode="email" autocomplete="email" placeholder="contato@empresa.com.br" value="${UI.escapeHtml(email)}" />
+      <input type="text" class="form-control cliente-email-responsavel" placeholder="Recepcao, Gerencia..." value="${UI.escapeHtml(responsavel)}" />
+      <button type="button" class="btn btn--ghost btn--sm contato-row__rem" data-a="rem-item" title="Remover">&times;</button>
+    `;
+    row.querySelector('[data-a="rem-item"]').addEventListener('click', () => {
+      const emailInp = row.querySelector('.cliente-email-endereco');
+      const respInp = row.querySelector('.cliente-email-responsavel');
+      if (lista.querySelectorAll('.contato-row').length <= 1) {
+        emailInp.value = '';
+        respInp.value = '';
+        return;
+      }
+      row.remove();
+    });
+    lista.appendChild(row);
+  }
+
+  function parseEmailsCliente(c) {
+    const raw = Array.isArray(c.emails) ? c.emails : [];
+    const items = raw.map((item) => {
+      if (typeof item === 'object' && item !== null) {
+        return {
+          email: String(item.email || '').trim(),
+          responsavel: String(item.responsavel || item.rotulo || '').trim()
+        };
+      }
+      const s = String(item || '').trim();
+      if (!s) return { email: '', responsavel: '' };
+      const sep = s.match(/^(.+?)\s*[—\-|]\s*(.+)$/);
+      if (sep) return { email: sep[1].trim(), responsavel: sep[2].trim() };
+      if (s.includes('@')) return { email: s, responsavel: '' };
+      return { email: '', responsavel: s };
+    });
+    return items.length ? items : [{ email: '', responsavel: '' }];
+  }
+
+  function lerEmailsDoFormulario() {
+    return Array.from(document.querySelectorAll('#cliente-emails-list .contato-row'))
+      .map((row) => ({
+        email: row.querySelector('.cliente-email-endereco')?.value.trim() || '',
+        responsavel: row.querySelector('.cliente-email-responsavel')?.value.trim() || ''
+      }))
+      .filter((item) => item.email || item.responsavel);
+  }
+
+  function validarEmailsFormulario() {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const errEl = document.getElementById('err-cliente-email');
+    for (const item of lerEmailsDoFormulario()) {
+      if (item.email && !re.test(item.email)) {
+        errEl.textContent = 'Informe um e-mail valido ou deixe o campo vazio.';
+        return false;
+      }
+    }
+    errEl.textContent = '';
+    return true;
   }
 
   function adicionarContatoRow(telefone = '', rotulo = '') {
@@ -577,6 +742,9 @@
     const contatos = document.getElementById('cliente-contatos-list');
     if (contatos) contatos.innerHTML = '';
     parseContatosCliente(c).forEach((item) => adicionarContatoRow(item.telefone, item.rotulo));
+    const emailsList = document.getElementById('cliente-emails-list');
+    if (emailsList) emailsList.innerHTML = '';
+    parseEmailsCliente(c).forEach((item) => adicionarEmailRow(item.email, item.responsavel));
     atualizarBotaoToggleCliente();
 
     const cepInp = document.getElementById('cliente-cep');
@@ -688,11 +856,16 @@
   document.getElementById('btn-novo-cliente')?.addEventListener('click', () => {
     limparFormCliente();
     adicionarContatoRow();
+    adicionarEmailRow();
     abrirModal('modal-cliente');
   });
 
   document.getElementById('btn-add-contato')?.addEventListener('click', () => {
     adicionarContatoRow();
+  });
+
+  document.getElementById('btn-add-email')?.addEventListener('click', () => {
+    adicionarEmailRow();
   });
 
   document.getElementById('btn-toggle-cliente')?.addEventListener('click', async () => {
@@ -780,6 +953,8 @@
     }
     errEl.textContent = '';
 
+    if (!validarEmailsFormulario()) return;
+
     const payload = {
       nome: document.getElementById('cliente-nome').value.trim(),
       documento,
@@ -789,6 +964,7 @@
       cidade: document.getElementById('cliente-cidade').value.trim(),
       cep: document.getElementById('cliente-cep').value.trim(),
       contatos: lerContatosDoFormulario(),
+      emails: lerEmailsDoFormulario(),
       observacoes: document.getElementById('cliente-obs').value.trim()
     };
     const btn = document.getElementById('btn-salvar-cliente');

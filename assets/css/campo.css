@@ -20,13 +20,12 @@ main.campo {
   .page-hero__actions {
     width: 100%;
     justify-content: stretch;
+    flex-direction: column;
   }
   .page-hero__actions .btn {
-    flex: 1 1 calc(50% - 4px);
-    justify-content: center;
-  }
-  .page-hero__actions .btn:first-child {
     flex: 1 1 100%;
+    width: 100%;
+    justify-content: center;
   }
 }
 

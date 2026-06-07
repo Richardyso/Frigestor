@@ -38,6 +38,7 @@ const {
   normalizarClientePayload: normalizarClienteDados,
   validarDocumento,
   validarEnderecoPartes,
+  validarEmailsLista,
   normalizarDocumento
 } = require('./lib/cliente-utils');
 const { verifyToken, extrairToken, responderAutenticado, clearAuthCookie } = require('./lib/auth-token');
@@ -513,6 +514,9 @@ function validarPayloadCliente(body, existente = null) {
     cep: body.cep ?? existente?.cep
   });
   if (errEnd && !body.endereco && !existente?.endereco) return errEnd;
+  const emailsRaw = body.emails != null ? body.emails : (existente?.emails || []);
+  const errEmail = validarEmailsLista(Array.isArray(emailsRaw) ? emailsRaw : []);
+  if (errEmail && 'emails' in (body || {})) return errEmail;
   return null;
 }
 
@@ -1089,6 +1093,7 @@ app.post('/api/clientes', authenticate, requireTenantAdmin, async (req, res) => 
       documento: dados.documento,
       cnpj: dados.cnpj,
       contatos: dados.contatos,
+      emails: dados.emails,
       responsaveis: dados.responsaveis,
       areas: dados.areas,
       observacoes: dados.observacoes,
@@ -1136,6 +1141,7 @@ app.patch('/api/clientes/:id', authenticate, requireTenantAdmin, async (req, res
     clientes[idx].documento = dados.documento;
     clientes[idx].cnpj = dados.cnpj;
     clientes[idx].contatos = dados.contatos;
+    clientes[idx].emails = dados.emails;
     clientes[idx].responsaveis = dados.responsaveis;
     clientes[idx].areas = dados.areas;
     clientes[idx].observacoes = dados.observacoes;
@@ -1246,6 +1252,28 @@ app.patch('/api/equipamentos/:id', authenticate, requireTenantAdmin, async (req,
       const errCliente = await validarClienteEmpresa(tenantId, req.body.clienteEmpresa);
       if (errCliente) return res.status(400).json({ error: errCliente });
     }
+    if ('tecnicoResponsavelUid' in req.body || 'tecnicoResponsavelNome' in req.body) {
+      const uid = req.body.tecnicoResponsavelUid;
+      const nome = String(req.body.tecnicoResponsavelNome || '').trim();
+      if (uid) {
+        const usuarios = await lerTenantJson(tenantId, 'usuarios.json');
+        const tec = usuarios.find((u) => u.uid === uid && u.role === 'tecnico');
+        if (!tec) return res.status(400).json({ error: 'Tecnico nao encontrado.' });
+        req.body.tecnicoResponsavelNome = tec.nome;
+      } else if (!nome) {
+        return res.status(400).json({ error: 'Informe o instalador (tecnico ou nome).' });
+      } else {
+        req.body.tecnicoResponsavelUid = null;
+        req.body.tecnicoResponsavelNome = nome;
+      }
+    }
+    if ('dataInstalacao' in req.body) {
+      const d = new Date(req.body.dataInstalacao);
+      if (Number.isNaN(d.getTime())) {
+        return res.status(400).json({ error: 'Data de instalacao invalida.' });
+      }
+      req.body.dataInstalacao = d.toISOString();
+    }
     const editaveis = [
       'nomeModelo',
       'numeroSerie',
@@ -1254,6 +1282,7 @@ app.patch('/api/equipamentos/:id', authenticate, requireTenantAdmin, async (req,
       'clienteEmpresa',
       'tecnicoResponsavelUid',
       'tecnicoResponsavelNome',
+      'dataInstalacao',
       ...ESPEC_AR_CAMPOS
     ];
     for (const c of editaveis) {
