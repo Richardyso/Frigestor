@@ -22,6 +22,7 @@ const {
   sendWelcomeEmail,
   sendActivationEmail,
   sendContaCriadaPeloAdminEmail,
+  sendEmpresaCadastroAtivoEmail,
   sendPasswordResetCodeEmail
 } = require('./lib/email');
 const { hashSenha, hashSenhaSeNecessario, verificarSenha } = require('./lib/password');
@@ -94,7 +95,7 @@ async function tenantAtivo(tenantId) {
 
 async function lerTenantJson(tenantId, arquivo) {
   if (!(await tenantAtivo(tenantId))) {
-    const err = new Error('Tenant invalido.');
+    const err = new Error('Empresa invalida.');
     err.code = 'TENANT_INVALIDO';
     throw err;
   }
@@ -103,7 +104,7 @@ async function lerTenantJson(tenantId, arquivo) {
 
 async function escreverTenantJson(tenantId, arquivo, dados) {
   if (!(await tenantAtivo(tenantId))) {
-    const err = new Error('Tenant invalido.');
+    const err = new Error('Empresa invalida.');
     err.code = 'TENANT_INVALIDO';
     throw err;
   }
@@ -655,7 +656,13 @@ async function criarTenantCompleto(payload) {
   };
   await escreverJson(path.join(id, 'usuarios.json'), [admin]);
 
-  await sendContaCriadaPeloAdminEmail(admin.email, admin.nome, admin.email, String(adminSenha));
+  await sendEmpresaCadastroAtivoEmail(
+    admin.email,
+    admin.nome,
+    admin.email,
+    String(adminSenha),
+    novoTenant.nome
+  );
 
   return { tenant: novoTenant, admin: omitirSenhaUsuario({ ...admin, tenantId: id }) };
 }
@@ -686,7 +693,7 @@ app.get('/api/tenants', async (_req, res) => {
     res.json(tenants.filter((t) => t.ativo !== false));
   } catch (err) {
     console.error('[GET /api/tenants]', err);
-    res.status(500).json({ error: 'Erro ao ler tenants.' });
+    res.status(500).json({ error: 'Erro ao ler empresas.' });
   }
 });
 
@@ -699,7 +706,7 @@ app.get('/api/tenants/:id', async (req, res) => {
     res.json({ ...meta, ...config });
   } catch (err) {
     console.error('[GET /api/tenants/:id]', err);
-    res.status(500).json({ error: 'Erro ao ler tenant.' });
+    res.status(500).json({ error: 'Erro ao ler empresa.' });
   }
 });
 
@@ -1420,7 +1427,7 @@ app.get('/api/plataforma/tenants', authenticate, requireSuperAdmin, async (req, 
     res.json(await lerTodosTenantsComStats());
   } catch (err) {
     console.error('[GET /api/plataforma/tenants]', err);
-    res.status(500).json({ error: 'Erro ao listar tenants.' });
+    res.status(500).json({ error: 'Erro ao listar empresas.' });
   }
 });
 
@@ -1477,7 +1484,7 @@ app.patch('/api/plataforma/tenants/:id', authenticate, requireSuperAdmin, async 
     const tenantId = req.params.id;
     const tenants = await lerJson('tenants.json');
     const idx = tenants.findIndex((t) => t.id === tenantId);
-    if (idx === -1) return res.status(404).json({ error: 'Tenant nao encontrado.' });
+    if (idx === -1) return res.status(404).json({ error: 'Empresa nao encontrada.' });
 
     const body = req.body || {};
     const campos = [
@@ -1515,7 +1522,7 @@ app.patch('/api/plataforma/tenants/:id', authenticate, requireSuperAdmin, async 
     res.json(atualizado);
   } catch (err) {
     console.error('[PATCH /api/plataforma/tenants/:id]', err);
-    res.status(500).json({ error: 'Erro ao atualizar tenant.' });
+    res.status(500).json({ error: 'Erro ao atualizar empresa.' });
   }
 });
 
@@ -1540,13 +1547,13 @@ app.get('/api/plataforma/tenants/:tenantId/usuarios', authenticate, requireSuper
     const { tenantId } = req.params;
     const tenants = await lerJson('tenants.json');
     if (!tenants.some((t) => t.id === tenantId)) {
-      return res.status(404).json({ error: 'Tenant nao encontrado.' });
+      return res.status(404).json({ error: 'Empresa nao encontrada.' });
     }
     const usuarios = await lerJson(path.join(tenantId, 'usuarios.json'));
     res.json(usuarios.map((u) => ({ ...omitirSenhaUsuario(u), tenantId })));
   } catch (err) {
     console.error('[GET /api/plataforma/tenants/:tenantId/usuarios]', err);
-    res.status(500).json({ error: 'Erro ao ler usuarios do tenant.' });
+    res.status(500).json({ error: 'Erro ao ler usuarios da empresa.' });
   }
 });
 
@@ -1559,7 +1566,7 @@ app.post('/api/plataforma/tenants/:tenantId/usuarios', authenticate, requireSupe
     }
     const tenants = await lerJson('tenants.json');
     if (!tenants.some((t) => t.id === tenantId)) {
-      return res.status(404).json({ error: 'Tenant nao encontrado.' });
+      return res.status(404).json({ error: 'Empresa nao encontrada.' });
     }
     if (await emailJaCadastrado(email)) {
       return res.status(409).json({ error: 'Ja existe um usuario com esse email.' });
@@ -1596,6 +1603,13 @@ app.patch('/api/plataforma/tenants/:tenantId/usuarios/:uid', authenticate, requi
     const campos = ['nome', 'email', 'role', 'ativo', 'status'];
     for (const c of campos) {
       if (c in req.body) usuarios[idx][c] = req.body[c];
+    }
+    if ('senha' in req.body) {
+      const senha = String(req.body.senha || '');
+      if (senha.length < 4) {
+        return res.status(400).json({ error: 'A senha deve ter no minimo 4 caracteres.' });
+      }
+      usuarios[idx].senha = await hashSenha(senha);
     }
     await escreverJson(path.join(tenantId, 'usuarios.json'), usuarios);
 
@@ -1654,7 +1668,7 @@ app.put('/api/plataforma/tenants/:tenantId/visitas', authenticate, requireSuperA
     }
     const tenants = await lerJson('tenants.json');
     if (!tenants.some((t) => t.id === tenantId)) {
-      return res.status(404).json({ error: 'Tenant nao encontrado.' });
+      return res.status(404).json({ error: 'Empresa nao encontrada.' });
     }
     for (const v of visitas) {
       if (!v.equipamentoId || !v.tipoServico) {
@@ -1694,11 +1708,11 @@ app.patch('/api/plataforma/cadastros-pendentes/:uid', authenticate, requireSuper
     }
 
     if (acao !== 'aprovar' || !tenantId) {
-      return res.status(400).json({ error: 'Informe acao=aprovar e tenantId.' });
+      return res.status(400).json({ error: 'Informe acao=aprovar e a empresa de destino.' });
     }
     const tenants = await lerJson('tenants.json');
     if (!tenants.some((t) => t.id === tenantId)) {
-      return res.status(400).json({ error: 'Tenant invalido.' });
+      return res.status(400).json({ error: 'Empresa invalida.' });
     }
 
     const pendente = pendentes.splice(idx, 1)[0];

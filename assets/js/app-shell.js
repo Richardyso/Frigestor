@@ -47,7 +47,7 @@
         await window.TENANT.carregar(u.tenantId);
       }
       const t = window.TENANT.atual;
-      empresaEl.textContent = t?.nome || u.tenantId;
+      empresaEl.textContent = t?.nome || 'Empresa';
     } else {
       empresaEl.textContent = '—';
     }

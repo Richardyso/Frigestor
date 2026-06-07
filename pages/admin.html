@@ -44,7 +44,7 @@
             <div>
               <span class="platform-hero__badge">Painel supremo</span>
               <h1>Controle da plataforma</h1>
-              <p>Gerencie empresas, usuarios e cadastros pendentes de todos os tenants.</p>
+              <p>Gerencie empresas, usuarios e cadastros pendentes de toda a plataforma.</p>
             </div>
           </div>
         </div>
@@ -79,7 +79,7 @@
       <!-- EMPRESAS -->
       <section class="platform-panel is-active" data-panel="empresas">
         <div class="tenants-toolbar">
-          <p class="tenants-toolbar__hint">Cada empresa recebe um ID unico no Firestore e nas rotas da API (<code>/api/tenants/{id}</code>).</p>
+          <p class="tenants-toolbar__hint">Cada empresa recebe um identificador unico (ID) usado internamente no sistema.</p>
           <button type="button" class="btn btn--accent btn--sm" id="btn-nova-empresa">+ Nova empresa</button>
         </div>
         <div class="tenant-grid" id="tenant-grid"></div>
@@ -89,11 +89,12 @@
       <section class="platform-panel" data-panel="usuarios">
         <div class="users-toolbar">
           <div class="form-group">
-            <label class="form-label" for="sel-tenant">Empresa (tenant)</label>
+            <label class="form-label" for="sel-tenant">Empresa</label>
             <select class="form-control" id="sel-tenant"></select>
           </div>
           <button class="btn btn--accent btn--sm" id="btn-novo-user">+ Novo usuario</button>
         </div>
+        <p class="form-label__hint" style="margin: -8px 0 16px;">Preencha <strong>Nova senha</strong> e clique em Salvar para redefinir a senha de tecnicos ou admins (como &quot;esqueci a senha&quot;).</p>
         <div class="table-wrap">
           <table class="table table--users">
             <thead>
@@ -102,6 +103,7 @@
                 <th>E-mail</th>
                 <th>Perfil</th>
                 <th>Status</th>
+                <th>Nova senha</th>
                 <th>Acoes</th>
               </tr>
             </thead>
@@ -192,7 +194,7 @@
           <div class="form-group">
             <label class="form-label" for="user-senha">Senha inicial *</label>
             <input class="form-control" type="password" id="user-senha" placeholder="Minimo 4 caracteres" autocomplete="new-password" />
-            <span class="form-label__hint">Definida apenas na criacao. Alteracao de senha ficara a cargo do usuario ou do admin da empresa.</span>
+            <span class="form-label__hint">Como admin supremo, voce pode redefinir a senha de qualquer usuario na tabela (tecnicos e admins).</span>
           </div>
           <div class="form-group">
             <label class="form-label" for="user-role">Perfil</label>
@@ -219,7 +221,7 @@
       </div>
       <div class="modal__body">
         <form id="form-tenant" novalidate>
-          <p class="modal-intro">Serao criados o tenant no <strong>Firestore</strong> (config, usuarios, equipamentos e visitas) e o primeiro admin da empresa.</p>
+          <p class="modal-intro">Serao criados os dados da empresa (configuracao, usuarios, equipamentos e visitas) e o primeiro administrador.</p>
 
           <h4 class="form-section-title">Dados da empresa</h4>
           <div class="form-row">
@@ -228,7 +230,7 @@
               <input class="form-control" id="tenant-nome" placeholder="Ex: Clima Frio" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="tenant-id">ID * <span class="form-label__hint">(slug nas rotas)</span></label>
+              <label class="form-label" for="tenant-id">ID * <span class="form-label__hint">(identificador unico)</span></label>
               <input class="form-control" id="tenant-id" placeholder="clima-frio" pattern="[a-z0-9][a-z0-9-]{1,39}" />
               <span class="form-label__hint" id="tenant-id-preview">Gerado automaticamente a partir do nome.</span>
             </div>

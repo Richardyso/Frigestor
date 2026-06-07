@@ -176,7 +176,7 @@
         this.atual = await jsonFetch(`/api/tenants/${encodeURIComponent(tenantId)}`, { skipAuth: true });
         return this.atual;
       } catch (err) {
-        console.warn('[TENANT] Falha ao carregar tenant:', err.message);
+        console.warn('[EMPRESA] Falha ao carregar configuracao:', err.message);
         this.atual = null;
         return null;
       }

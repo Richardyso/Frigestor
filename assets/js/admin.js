@@ -166,7 +166,7 @@
     if (inpId) inpId.value = slug;
     if (idPreview) {
       idPreview.textContent = slug
-        ? `Firestore · /api/tenants/${slug}`
+        ? `Identificador: ${slug}`
         : 'Gerado automaticamente a partir do nome.';
     }
   }
@@ -175,7 +175,7 @@
   inpId?.addEventListener('input', () => {
     idTenantManual = true;
     if (idPreview && inpId.value) {
-      idPreview.textContent = `Firestore · /api/tenants/${inpId.value}`;
+      idPreview.textContent = inpId.value ? `Identificador: ${inpId.value}` : 'Gerado automaticamente a partir do nome.';
     }
   });
 
@@ -214,7 +214,7 @@
     const fim = window.UI.botaoLoading(btn, 'Criando...');
     try {
       const resultado = await window.DB.plataforma.tenants.criar(payload);
-      window.UI.toast(`Empresa "${resultado.tenant.nome}" criada com sucesso!`, 'success');
+      window.UI.toast(`Empresa "${resultado.tenant?.nome || payload.nome}" criada com sucesso!`, 'success');
       fecharModal('modal-tenant');
       tenantSelecionado = resultado.tenant.id;
       await carregarTudo();
@@ -358,10 +358,14 @@
     }
   }
 
+  function nomeEmpresaSelecionada() {
+    return tenants.find((t) => t.id === tenantSelecionado)?.nome || tenantSelecionado;
+  }
+
   function renderUsuarios() {
     const tbody = document.getElementById('tbl-users');
     if (!usuariosTenant.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum usuario nesta empresa.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum usuario nesta empresa.</td></tr>';
       return;
     }
     tbody.innerHTML = usuariosTenant.map((u) => `
@@ -377,9 +381,12 @@
         <td data-label="Status">
           <span class="badge ${u.ativo ? 'badge--success' : 'badge--muted'}">${u.ativo ? 'Ativo' : 'Inativo'}</span>
         </td>
+        <td data-label="Nova senha">
+          <input class="form-control form-control--sm user-senha" type="password" placeholder="Min. 4 caracteres" autocomplete="new-password" />
+        </td>
         <td data-label="Acoes">
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="btn btn--accent btn--sm btn--icon" data-a="save" title="Salvar perfil">Salvar</button>
+            <button class="btn btn--accent btn--sm btn--icon" data-a="save" title="Salvar alteracoes">Salvar</button>
             <button class="btn btn--ghost btn--sm" data-a="toggle">${u.ativo ? 'Desativar' : 'Ativar'}</button>
             <button class="btn btn--danger btn--sm" data-a="delete">Excluir</button>
           </div>
@@ -397,9 +404,19 @@
 
   async function salvarUsuario(uid, tr) {
     const role = tr.querySelector('.user-role').value;
+    const senha = tr.querySelector('.user-senha')?.value || '';
+    const payload = { role };
+    if (senha.trim()) {
+      if (senha.length < 4) {
+        window.UI.toast('A senha deve ter no minimo 4 caracteres.', 'danger');
+        return;
+      }
+      payload.senha = senha;
+    }
     try {
-      await window.DB.plataforma.usuarios.atualizar(tenantSelecionado, uid, { role });
-      window.UI.toast('Perfil atualizado!', 'success');
+      await window.DB.plataforma.usuarios.atualizar(tenantSelecionado, uid, payload);
+      window.UI.toast(payload.senha ? 'Perfil e senha atualizados!' : 'Perfil atualizado!', 'success');
+      if (tr.querySelector('.user-senha')) tr.querySelector('.user-senha').value = '';
       await carregarTudo();
     } catch (err) {
       window.UI.toast(err.message, 'danger');
@@ -433,7 +450,7 @@
 
   document.getElementById('btn-novo-user').addEventListener('click', () => {
     document.getElementById('form-user').reset();
-    document.getElementById('modal-user-title').textContent = `Novo usuario — ${tenantSelecionado}`;
+    document.getElementById('modal-user-title').textContent = `Novo usuario — ${nomeEmpresaSelecionada()}`;
     abrirModal('modal-user');
   });
 
@@ -555,6 +572,10 @@
     }
   }
 
+  function nomeEmpresaPorId(id) {
+    return tenants.find((t) => t.id === id)?.nome || id;
+  }
+
   function filtrarPorTenant(lista) {
     if (!filtroOperacional) return lista;
     return lista.filter((item) => item.tenantId === filtroOperacional);
@@ -570,7 +591,7 @@
     }
     tbody.innerHTML = lista.map((e) => `
       <tr>
-        <td data-label="Empresa">${UI.escapeHtml(e.tenantNome || e.tenantId)}</td>
+        <td data-label="Empresa">${UI.escapeHtml(e.tenantNome || nomeEmpresaPorId(e.tenantId))}</td>
         <td data-label="Equipamento"><strong>${UI.escapeHtml(e.nomeModelo || '—')}</strong></td>
         <td data-label="Tipo">${UI.escapeHtml(e.tipoEquipamento || '—')}</td>
         <td data-label="Cliente">${UI.escapeHtml(e.clienteEmpresa || '—')}</td>
@@ -591,7 +612,7 @@
     }
     tbody.innerHTML = lista.map((v) => `
       <tr>
-        <td data-label="Empresa">${UI.escapeHtml(v.tenantNome || v.tenantId)}</td>
+        <td data-label="Empresa">${UI.escapeHtml(v.tenantNome || nomeEmpresaPorId(v.tenantId))}</td>
         <td data-label="Equipamento"><strong>${UI.escapeHtml(v.equipamentoNome || v.equipamentoId)}</strong></td>
         <td data-label="Data">${UI.formatarData(v.dataVisita)}</td>
         <td data-label="Servico">${UI.escapeHtml(v.tipoServico || '—')}</td>
