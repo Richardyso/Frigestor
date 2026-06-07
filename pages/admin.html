@@ -284,9 +284,9 @@
     </div>
   </div>
 
-  <!-- MODAL: EDITAR EMPRESA (dados internos — CNPJ nao aparece nos cards) -->
+  <!-- MODAL: EDITAR EMPRESA (dados completos) -->
   <div class="modal-backdrop" id="modal-tenant-edit">
-    <div class="modal">
+    <div class="modal modal--wide">
       <div class="modal__header">
         <h3 id="modal-tenant-edit-title">Editar empresa</h3>
         <button class="modal__close" data-close="modal-tenant-edit">&times;</button>
@@ -294,33 +294,79 @@
       <div class="modal__body">
         <form id="form-tenant-edit" novalidate>
           <input type="hidden" id="edit-tenant-id" />
-          <div class="form-group">
-            <label class="form-label" for="edit-tenant-nome">Nome</label>
-            <input class="form-control" id="edit-tenant-nome" />
-          </div>
-          <div class="form-row">
+
+          <div class="tenant-edit-stats" id="edit-tenant-stats"></div>
+
+          <p class="form-label__hint" style="margin: 0 0 14px;">ID: <code id="edit-tenant-id-display"></code></p>
+
+          <fieldset class="form-fieldset">
+            <legend class="form-label">Dados da empresa</legend>
             <div class="form-group">
-              <label class="form-label" for="edit-tenant-responsavel">Responsavel</label>
-              <input class="form-control" id="edit-tenant-responsavel" />
+              <label class="form-label" for="edit-tenant-nome">Nome *</label>
+              <input class="form-control" id="edit-tenant-nome" required />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="edit-tenant-responsavel">Responsavel *</label>
+                <input class="form-control" id="edit-tenant-responsavel" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="edit-tenant-telefone">Telefone comercial *</label>
+                <input class="form-control" id="edit-tenant-telefone" required />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="edit-tenant-email">E-mail comercial *</label>
+                <input class="form-control" type="email" id="edit-tenant-email" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="edit-tenant-cnpj">CNPJ</label>
+                <input class="form-control" id="edit-tenant-cnpj" placeholder="00.000.000/0000-00" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="edit-tenant-contrato">Contrato desde</label>
+                <input class="form-control" type="date" id="edit-tenant-contrato" />
+              </div>
+              <div class="form-group form-group--checkbox">
+                <label class="form-check">
+                  <input type="checkbox" id="edit-tenant-ativo" />
+                  Empresa ativa
+                </label>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-fieldset">
+            <legend class="form-label">Marca e operacao</legend>
+            <div class="form-group">
+              <label class="form-label" for="edit-tenant-brand-sub">Subtitulo da marca</label>
+              <input class="form-control" id="edit-tenant-brand-sub" placeholder="Climatizacao e ar condicionado" />
+            </div>
+            <div class="form-group form-group--checkbox">
+              <label class="form-check">
+                <input type="checkbox" id="edit-tenant-usa-spec" checked />
+                Usar especificacoes tecnicas de ar condicionado
+              </label>
             </div>
             <div class="form-group">
-              <label class="form-label" for="edit-tenant-telefone">Telefone comercial</label>
-              <input class="form-control" id="edit-tenant-telefone" />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label" for="edit-tenant-email">E-mail comercial</label>
-              <input class="form-control" type="email" id="edit-tenant-email" />
+              <label class="form-label" for="edit-tenant-tipos-equip">Tipos de equipamento <span class="form-label__hint">(um por linha)</span></label>
+              <textarea class="form-control" id="edit-tenant-tipos-equip" rows="4"></textarea>
             </div>
             <div class="form-group">
-              <label class="form-label" for="edit-tenant-cnpj">CNPJ</label>
-              <input class="form-control" id="edit-tenant-cnpj" placeholder="00.000.000/0000-00" />
+              <label class="form-label" for="edit-tenant-tipos-visita">Tipos de visita <span class="form-label__hint">(um por linha)</span></label>
+              <textarea class="form-control" id="edit-tenant-tipos-visita" rows="4"></textarea>
             </div>
-          </div>
-          <div class="form-actions">
-            <button type="button" class="btn btn--ghost" data-close="modal-tenant-edit">Cancelar</button>
-            <button type="submit" id="btn-salvar-tenant-edit" class="btn btn--accent">Salvar</button>
+          </fieldset>
+
+          <div class="form-actions form-actions--split">
+            <button type="button" class="btn btn--danger btn--sm" id="btn-excluir-tenant">Excluir empresa</button>
+            <div class="form-actions__right">
+              <button type="button" class="btn btn--ghost" data-close="modal-tenant-edit">Cancelar</button>
+              <button type="submit" id="btn-salvar-tenant-edit" class="btn btn--accent">Salvar alteracoes</button>
+            </div>
           </div>
         </form>
       </div>

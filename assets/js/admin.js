@@ -105,6 +105,7 @@
         </div>
         <div class="tenant-card__stats">
           <div class="tenant-card__stat"><strong>${t.stats?.usuarios || 0}</strong>usuarios</div>
+          <div class="tenant-card__stat"><strong>${t.stats?.clientes || 0}</strong>clientes</div>
           <div class="tenant-card__stat"><strong>${t.stats?.equipamentos || 0}</strong>equip.</div>
           <div class="tenant-card__stat"><strong>${t.stats?.visitas || 0}</strong>visitas</div>
         </div>
@@ -224,17 +225,48 @@
     }
   });
 
-  function abrirEditarTenant(id) {
-    const t = tenants.find((x) => x.id === id);
-    if (!t) return;
-    document.getElementById('edit-tenant-id').value = t.id;
-    document.getElementById('edit-tenant-nome').value = t.nome || '';
-    document.getElementById('edit-tenant-responsavel').value = t.responsavel || '';
-    document.getElementById('edit-tenant-telefone').value = t.telefoneComercial || '';
-    document.getElementById('edit-tenant-email').value = t.emailComercial || '';
-    document.getElementById('edit-tenant-cnpj').value = t.cnpj || '';
-    document.getElementById('modal-tenant-edit-title').textContent = `Editar — ${t.nome}`;
-    abrirModal('modal-tenant-edit');
+  function listaParaTextarea(arr) {
+    return Array.isArray(arr) ? arr.join('\n') : '';
+  }
+
+  function textareaParaLista(val) {
+    return String(val || '').split(/[\n,;]+/).map((x) => x.trim()).filter(Boolean);
+  }
+
+  async function abrirEditarTenant(id) {
+    try {
+      const t = await window.DB.plataforma.tenants.buscar(id);
+      document.getElementById('edit-tenant-id').value = t.id;
+      document.getElementById('edit-tenant-id-display').textContent = t.id;
+      document.getElementById('edit-tenant-nome').value = t.nome || '';
+      document.getElementById('edit-tenant-responsavel').value = t.responsavel || '';
+      document.getElementById('edit-tenant-telefone').value = t.telefoneComercial || '';
+      document.getElementById('edit-tenant-email').value = t.emailComercial || '';
+      document.getElementById('edit-tenant-cnpj').value = t.cnpj || '';
+      document.getElementById('edit-tenant-contrato').value = t.contratoDesde || '';
+      document.getElementById('edit-tenant-ativo').checked = t.ativo !== false;
+      document.getElementById('edit-tenant-brand-sub').value = t.brandSubtitulo || '';
+      document.getElementById('edit-tenant-usa-spec').checked = t.usaEspecificacoesAr !== false;
+      document.getElementById('edit-tenant-tipos-equip').value = listaParaTextarea(t.equipamentoTipos);
+      document.getElementById('edit-tenant-tipos-visita').value = listaParaTextarea(t.visitaTipos);
+      document.getElementById('modal-tenant-edit-title').textContent = `Editar — ${t.nome}`;
+
+      const statsEl = document.getElementById('edit-tenant-stats');
+      if (statsEl) {
+        const s = t.stats || {};
+        statsEl.innerHTML = `
+          <div class="tenant-edit-stats__grid">
+            <div><strong>${s.usuarios || 0}</strong><span>Usuarios</span></div>
+            <div><strong>${s.clientes || 0}</strong><span>Clientes</span></div>
+            <div><strong>${s.equipamentos || 0}</strong><span>Equipamentos</span></div>
+            <div><strong>${s.visitas || 0}</strong><span>Visitas</span></div>
+          </div>
+        `;
+      }
+      abrirModal('modal-tenant-edit');
+    } catch (err) {
+      window.UI.toast(err.message, 'danger');
+    }
   }
 
   document.getElementById('form-tenant-edit').addEventListener('submit', async (ev) => {
@@ -245,14 +277,51 @@
       responsavel: document.getElementById('edit-tenant-responsavel').value.trim(),
       telefoneComercial: document.getElementById('edit-tenant-telefone').value.trim(),
       emailComercial: document.getElementById('edit-tenant-email').value.trim(),
-      cnpj: document.getElementById('edit-tenant-cnpj').value.trim()
+      cnpj: document.getElementById('edit-tenant-cnpj').value.trim(),
+      contratoDesde: document.getElementById('edit-tenant-contrato').value,
+      ativo: document.getElementById('edit-tenant-ativo').checked,
+      brandSubtitulo: document.getElementById('edit-tenant-brand-sub').value.trim(),
+      usaEspecificacoesAr: document.getElementById('edit-tenant-usa-spec').checked,
+      equipamentoTipos: textareaParaLista(document.getElementById('edit-tenant-tipos-equip').value),
+      visitaTipos: textareaParaLista(document.getElementById('edit-tenant-tipos-visita').value)
     };
+    if (!payload.nome || !payload.responsavel || !payload.telefoneComercial || !payload.emailComercial) {
+      window.UI.toast('Preencha nome, responsavel, telefone e e-mail comercial.', 'danger');
+      return;
+    }
     const btn = document.getElementById('btn-salvar-tenant-edit');
     const fim = window.UI.botaoLoading(btn, 'Salvando...');
     try {
       await window.DB.plataforma.tenants.atualizar(id, payload);
       window.UI.toast('Dados da empresa atualizados.', 'success');
       fecharModal('modal-tenant-edit');
+      await carregarTudo();
+    } catch (err) {
+      window.UI.toast(err.message, 'danger');
+    } finally {
+      fim();
+    }
+  });
+
+  document.getElementById('btn-excluir-tenant')?.addEventListener('click', async () => {
+    const id = document.getElementById('edit-tenant-id').value;
+    const nome = document.getElementById('edit-tenant-nome').value.trim();
+    if (!id) return;
+    const msg = `ATENCAO: excluir "${nome}" apaga PERMANENTEMENTE no Firestore:\n` +
+      '- todos os usuarios\n- clientes\n- equipamentos\n- visitas\n- configuracoes\n\n' +
+      `Digite o ID da empresa para confirmar:\n${id}`;
+    const confirmacao = prompt(msg);
+    if (confirmacao !== id) {
+      if (confirmacao !== null) window.UI.toast('Exclusao cancelada — ID nao confere.', 'warning');
+      return;
+    }
+    const btn = document.getElementById('btn-excluir-tenant');
+    const fim = window.UI.botaoLoading(btn, 'Excluindo...');
+    try {
+      await window.DB.plataforma.tenants.excluir(id);
+      window.UI.toast('Empresa excluida permanentemente.', 'success');
+      fecharModal('modal-tenant-edit');
+      if (tenantSelecionado === id) tenantSelecionado = '';
       await carregarTudo();
     } catch (err) {
       window.UI.toast(err.message, 'danger');

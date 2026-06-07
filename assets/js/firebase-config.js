@@ -369,6 +369,14 @@
           return jsonFetch(`/api/plataforma/tenants/${encodeURIComponent(id)}`, {
             method: 'PATCH', body: JSON.stringify(payload)
           });
+        },
+        buscar(id) {
+          return jsonFetch(`/api/plataforma/tenants/${encodeURIComponent(id)}`);
+        },
+        excluir(id) {
+          return jsonFetch(`/api/plataforma/tenants/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+          });
         }
       },
       usuarios: {

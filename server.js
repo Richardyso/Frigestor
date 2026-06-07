@@ -16,7 +16,7 @@ const path = require('path');
 const crypto = require('crypto');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
-const { lerJson, escreverJson, tenantDocExiste } = require('./lib/data-store');
+const { lerJson, escreverJson, tenantDocExiste, excluirTenantCompleto } = require('./lib/data-store');
 const { verifyGoogleIdToken } = require('./lib/firebase-admin');
 const {
   sendWelcomeEmail,
@@ -373,26 +373,45 @@ async function listarVisitasTenant(tenantId, equipamentoId) {
   return visitas;
 }
 
+async function lerStatsTenant(tenantId) {
+  let usuarios = [];
+  let equipamentos = [];
+  let visitas = [];
+  let clientes = [];
+  try { usuarios = await lerJson(path.join(tenantId, 'usuarios.json')); } catch (_) { /* vazio */ }
+  try { equipamentos = await lerJson(path.join(tenantId, 'equipamentos.json')); } catch (_) { /* vazio */ }
+  try { visitas = await lerJson(path.join(tenantId, 'visitas.json')); } catch (_) { /* vazio */ }
+  try { clientes = await lerJson(path.join(tenantId, 'clientes.json')); } catch (_) { /* vazio */ }
+  return {
+    usuarios: usuarios.length,
+    equipamentos: equipamentos.length,
+    visitas: visitas.length,
+    clientes: clientes.length
+  };
+}
+
+async function lerTenantPlataforma(tenantId) {
+  const tenants = await lerJson('tenants.json');
+  const meta = tenants.find((t) => t.id === tenantId);
+  if (!meta) return null;
+  const config = (await lerConfigTenant(tenantId)) || configPadraoTenant('');
+  const stats = await lerStatsTenant(tenantId);
+  return {
+    ...meta,
+    brandSubtitulo: config.brand?.subtitulo || '',
+    usaEspecificacoesAr: config.usaEspecificacoesAr !== false,
+    equipamentoTipos: config.equipamentoTipos || [],
+    visitaTipos: config.visitaTipos || [],
+    stats
+  };
+}
+
 async function lerTodosTenantsComStats() {
   const tenants = await lerJson('tenants.json');
   const resultado = [];
   for (const t of tenants) {
-    let usuarios = [];
-    let equipamentos = [];
-    let visitas = [];
-    try {
-      usuarios = await lerJson(path.join(t.id, 'usuarios.json'));
-      equipamentos = await lerJson(path.join(t.id, 'equipamentos.json'));
-      visitas = await lerJson(path.join(t.id, 'visitas.json'));
-    } catch (_) { /* pasta ainda nao criada */ }
-    resultado.push({
-      ...t,
-      stats: {
-        usuarios: usuarios.length,
-        equipamentos: equipamentos.length,
-        visitas: visitas.length
-      }
-    });
+    const stats = await lerStatsTenant(t.id);
+    resultado.push({ ...t, stats });
   }
   return resultado;
 }
@@ -1442,24 +1461,77 @@ app.post('/api/plataforma/tenants', authenticate, requireSuperAdmin, async (req,
   }
 });
 
+app.get('/api/plataforma/tenants/:id', authenticate, requireSuperAdmin, async (req, res) => {
+  try {
+    const tenant = await lerTenantPlataforma(req.params.id);
+    if (!tenant) return res.status(404).json({ error: 'Empresa nao encontrada.' });
+    res.json(tenant);
+  } catch (err) {
+    console.error('[GET /api/plataforma/tenants/:id]', err);
+    res.status(500).json({ error: 'Erro ao ler empresa.' });
+  }
+});
+
 app.patch('/api/plataforma/tenants/:id', authenticate, requireSuperAdmin, async (req, res) => {
   try {
+    const tenantId = req.params.id;
     const tenants = await lerJson('tenants.json');
-    const idx = tenants.findIndex((t) => t.id === req.params.id);
+    const idx = tenants.findIndex((t) => t.id === tenantId);
     if (idx === -1) return res.status(404).json({ error: 'Tenant nao encontrado.' });
 
+    const body = req.body || {};
     const campos = [
       'nome', 'ativo', 'contratoDesde',
       'responsavel', 'telefoneComercial', 'emailComercial', 'cnpj'
     ];
     for (const c of campos) {
-      if (c in req.body) tenants[idx][c] = req.body[c];
+      if (c in body) tenants[idx][c] = body[c];
+    }
+    if ('emailComercial' in body && body.emailComercial) {
+      tenants[idx].emailComercial = String(body.emailComercial).trim().toLowerCase();
     }
     await escreverJson('tenants.json', tenants);
-    res.json(tenants[idx]);
+
+    const configKeys = ['brandSubtitulo', 'equipamentoTipos', 'visitaTipos', 'usaEspecificacoesAr'];
+    if (configKeys.some((k) => k in body)) {
+      const config = (await lerConfigTenant(tenantId)) || configPadraoTenant('');
+      if ('brandSubtitulo' in body) {
+        config.brand = config.brand || {};
+        config.brand.subtitulo = String(body.brandSubtitulo || '').trim();
+      }
+      if ('equipamentoTipos' in body && Array.isArray(body.equipamentoTipos)) {
+        config.equipamentoTipos = body.equipamentoTipos.map((x) => String(x).trim()).filter(Boolean);
+      }
+      if ('visitaTipos' in body && Array.isArray(body.visitaTipos)) {
+        config.visitaTipos = body.visitaTipos.map((x) => String(x).trim()).filter(Boolean);
+      }
+      if ('usaEspecificacoesAr' in body) {
+        config.usaEspecificacoesAr = !!body.usaEspecificacoesAr;
+      }
+      await escreverJson(path.join(tenantId, 'config.json'), config);
+    }
+
+    const atualizado = await lerTenantPlataforma(tenantId);
+    res.json(atualizado);
   } catch (err) {
     console.error('[PATCH /api/plataforma/tenants/:id]', err);
     res.status(500).json({ error: 'Erro ao atualizar tenant.' });
+  }
+});
+
+app.delete('/api/plataforma/tenants/:id', authenticate, requireSuperAdmin, async (req, res) => {
+  try {
+    const tenantId = req.params.id;
+    const tenants = await lerJson('tenants.json');
+    if (!tenants.some((t) => t.id === tenantId)) {
+      return res.status(404).json({ error: 'Empresa nao encontrada.' });
+    }
+    const ok = await excluirTenantCompleto(tenantId);
+    if (!ok) return res.status(404).json({ error: 'Empresa nao encontrada no Firestore.' });
+    res.json({ ok: true, mensagem: 'Empresa e todos os dados associados foram excluidos.' });
+  } catch (err) {
+    console.error('[DELETE /api/plataforma/tenants/:id]', err);
+    res.status(500).json({ error: 'Erro ao excluir empresa.' });
   }
 });
 
